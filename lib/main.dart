@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';   // ← Add this import
+import 'package:flutter_localizations/flutter_localizations.dart'; // ← Add this import
 import 'package:provider/provider.dart';
 
 import 'core/constants/app_strings.dart';

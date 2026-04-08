@@ -15,7 +15,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
   google_fonts: ^6.2.1
-  sqflite: ^2.3.3+1
   path: ^1.9.0
   speech_to_text: ^7.3.0
   flutter_tts: ^4.0.2
@@ -23,10 +22,19 @@ dependencies:
   permission_handler: ^12.0.1
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+<<<<<<< HEAD
   camera: ^0.10.5+9
   google_mlkit_text_recognition: ^0.11.0
   flutter_local_notifications: ^17.0.0
 
+=======
+  google_generative_ai: ^0.4.0          # For Gemini 2.0 Flash / 2.5 Flash
+  flutter_secure_storage: ^9.0.0        # To store encryption key securely
+  intl: ^0.19.0
+  sqflite_common_ffi: ^2.3.0
+  sqflite_sqlcipher: ^2.2.1
+  shared_preferences: ^2.5.3
+>>>>>>> 2d61b9a (second)
 dev_dependencies:
   flutter_test:
     sdk: flutter

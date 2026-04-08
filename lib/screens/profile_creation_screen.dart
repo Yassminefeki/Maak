@@ -1,5 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/app_strings.dart';
 import '../core/providers/language_provider.dart';
 import 'home_screen.dart';
@@ -13,121 +18,268 @@ class ProfileCreationScreen extends StatefulWidget {
 
 class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
   final _formKey = GlobalKey<FormState>();
+  final storage = const FlutterSecureStorage();
 
-  final TextEditingController fullNameController = TextEditingController(text: "Mohamed Ben Ali");
-  final TextEditingController cinController = TextEditingController(text: "01234567");
-  final TextEditingController birthDateController = TextEditingController(text: "15/03/1990");
-  final TextEditingController phoneController = TextEditingController(text: "+216 98 000 000");
-  final TextEditingController addressController = TextEditingController(text: "Rue Ibn Khaldoun, Tunis");
+  // Controllers
+  final fullNameController = TextEditingController();
+  final cinController = TextEditingController();
+  final birthDateController = TextEditingController();
+  final phoneController = TextEditingController();
+  final addressController = TextEditingController();
+
+  int currentStep = 0;
+
+  // Voice
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  bool _isProcessing = false;
+  String _spokenText = '';
+
+  // Gemini AI
+  late GenerativeModel _geminiModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+    _initGemini();
+    _initDatabaseKey();
+  }
+
+  Future<void> _initGemini() async {
+    const apiKey = 'YOUR_API_KEY_HERE';
+    _geminiModel = GenerativeModel(model: 'gemini-2.0-flash-exp', apiKey: apiKey);
+  }
+
+  Future<void> _initDatabaseKey() async {
+    String? key = await storage.read(key: 'db_encryption_key');
+    if (key == null) {
+      key = _generateSecureKey();
+      await storage.write(key: 'db_encryption_key', value: key);
+    }
+  }
+
+  String _generateSecureKey() => '32characterstrongrandomkey12345678';
+
+  // ==================== Voice AI ====================
+  Future<void> _startVoiceInput() async {
+    bool available = await _speech.initialize(
+      onStatus: (val) => debugPrint('Speech status: $val'),
+      onError: (val) => debugPrint('Speech error: $val'),
+    );
+    if (available) {
+      setState(() => _isListening = true);
+      await _speech.listen(
+        onResult: (result) => setState(() => _spokenText = result.recognizedWords),
+        localeId: 'ar_TN',
+      );
+    }
+  }
+
+  Future<void> _stopListeningAndProcess() async {
+    await _speech.stop();
+    setState(() => _isListening = false);
+    if (_spokenText.trim().isEmpty) return;
+
+    setState(() => _isProcessing = true);
+    await _processWithGemini(_spokenText);
+    setState(() => _isProcessing = false);
+  }
+
+  Future<void> _processWithGemini(String transcript) async {
+    final prompt = '''
+Extract the personal information from the following spoken text (Tunisian Arabic, French, or mixed) for step ${currentStep + 1}.
+Return **only** a valid JSON object with these keys:
+
+{
+  "full_name": "string",
+  "cin": "8 digits string",
+  "date_of_birth": "DD/MM/YYYY",
+  "phone_number": "+216 XX XXX XXX",
+  "home_address": "string"
+}
+
+Spoken text: "$transcript"
+''';
+
+    try {
+      final response = await _geminiModel.generateContent([Content.text(prompt)]);
+      String jsonStr = response.text ?? '';
+      jsonStr = jsonStr.replaceAll('```json', '').replaceAll('```', '').trim();
+
+      final Map<String, dynamic>? extracted = jsonDecode(jsonStr);
+      if (extracted != null && extracted.isNotEmpty) _fillFormFromVoice(extracted);
+    } catch (e) {
+      _showError('Gemini error: $e');
+    }
+  }
+
+  void _fillFormFromVoice(Map<String, dynamic> data) {
+    setState(() {
+      if (currentStep == 0) {
+        fullNameController.text = data['full_name']?.toString() ?? '';
+        cinController.text = data['cin']?.toString() ?? '';
+      } else if (currentStep == 1) {
+        birthDateController.text = data['date_of_birth']?.toString() ?? '';
+        phoneController.text = data['phone_number']?.toString() ?? '';
+      } else if (currentStep == 2) {
+        addressController.text = data['home_address']?.toString() ?? '';
+      }
+    });
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
+  }
+
+  // ==================== Step Navigation ====================
+  void nextStep() {
+    if (_formKey.currentState!.validate()) {
+      if (currentStep < 2) setState(() => currentStep += 1);
+      else _saveProfile();
+    }
+  }
+
+  void previousStep() {
+    if (currentStep > 0) setState(() => currentStep -= 1);
+  }
+
+  Widget stepContent(LanguageProvider lang) {
+    switch (currentStep) {
+      case 0:
+        return Column(
+          children: [
+            _buildTextField(lang.t('full_name'), fullNameController),
+            const SizedBox(height: 20),
+            _buildTextField(lang.t('cin_number'), cinController),
+          ],
+        );
+      case 1:
+        return Column(
+          children: [
+            _buildTextField(lang.t('date_of_birth'), birthDateController),
+            const SizedBox(height: 20),
+            _buildTextField(lang.t('phone_number'), phoneController),
+          ],
+        );
+      case 2:
+        return Column(
+          children: [
+            _buildTextField(lang.t('home_address'), addressController, maxLines: 2),
+          ],
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    String? key = await storage.read(key: 'db_encryption_key');
+    if (key == null) {
+      _showError('Encryption key not found');
+      return;
+    }
+
+    final db = await openDatabase(
+      'profile.db',
+      password: key,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE profile (
+            id INTEGER PRIMARY KEY,
+            full_name TEXT,
+            cin TEXT,
+            birth_date TEXT,
+            phone TEXT,
+            address TEXT
+          )
+        ''');
+      },
+    );
+
+    await db.insert('profile', {
+      'full_name': fullNameController.text,
+      'cin': cinController.text,
+      'birth_date': birthDateController.text,
+      'phone': phoneController.text,
+      'address': addressController.text,
+    });
+
+    await db.close();
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final langProvider = Provider.of<LanguageProvider>(context);
+    final lang = Provider.of<LanguageProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A2A6E),
-        foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(AppStrings.get(context, 'app_title')),
-            Text('${AppStrings.get(context, 'step_1_of_3')} — ${AppStrings.get(context, 'personal_identity')}',
-                style: const TextStyle(fontSize: 14)),
-          ],
-        ),
+        title: Text('${lang.t('step')} ${currentStep + 1} ${lang.t('of')} 3'),
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                AppStrings.get(context, 'create_profile'),
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                AppStrings.get(context, 'stored_securely'),
-                style: const TextStyle(color: Colors.grey),
-              ),
+              stepContent(lang),
               const SizedBox(height: 20),
-
-              // Voice Help
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(30)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.mic, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text(AppStrings.get(context, 'need_help_speak')),
-                  ],
+              ElevatedButton.icon(
+                onPressed: _isProcessing
+                    ? null
+                    : (_isListening ? _stopListeningAndProcess : _startVoiceInput),
+                icon: _isProcessing
+                    ? const SizedBox(
+                        width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Icon(_isListening ? Icons.stop : Icons.mic),
+                label: Text(
+                  _isProcessing
+                      ? lang.t('processing')
+                      : (_isListening ? lang.t('stop_and_fill') : lang.t('speak_to_fill')),
                 ),
-              ),
-
-              const SizedBox(height: 30),
-
-              _buildTextField(AppStrings.get(context, 'full_name'), fullNameController),
-              const SizedBox(height: 20),
-              _buildTextField(AppStrings.get(context, 'cin_number'), cinController),
-              const SizedBox(height: 20),
-              _buildTextField(AppStrings.get(context, 'date_of_birth'), birthDateController),
-              const SizedBox(height: 20),
-              _buildTextField(AppStrings.get(context, 'phone_number'), phoneController),
-              const SizedBox(height: 20),
-              _buildTextField(AppStrings.get(context, 'home_address'), addressController, maxLines: 2),
-
-              const SizedBox(height: 40),
-
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // If the form is valid, navigate to HomeScreen
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
-                    );
-                  }
-                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0A2A6E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                  AppStrings.get(context, 'next'),
-                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                  backgroundColor: _isListening ? Colors.red : const Color(0xFF0A2A6E),
+                  minimumSize: const Size(double.infinity, 56),
                 ),
               ),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (currentStep > 0)
+                    ElevatedButton(
+                        onPressed: previousStep,
+                        child: Text(lang.t('back'))),
+                  ElevatedButton(
+                      onPressed: nextStep,
+                      child: Text(currentStep < 2 ? lang.t('next') : lang.t('submit'))),
+                ],
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ],
     );
   }
 
@@ -138,6 +290,7 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
     birthDateController.dispose();
     phoneController.dispose();
     addressController.dispose();
+    _speech.stop();
     super.dispose();
   }
 }

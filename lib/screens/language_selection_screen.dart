@@ -3,6 +3,20 @@ import 'package:provider/provider.dart';
 import '../core/providers/language_provider.dart';
 import '../core/constants/app_strings.dart';
 import 'profile_creation_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Placeholder HomeScreen; replace with your actual dashboard screen
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Home')),
+      body: const Center(child: Text('Welcome back!')),
+    );
+  }
+}
 
 class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
@@ -27,11 +41,14 @@ class LanguageSelectionScreen extends StatelessWidget {
             ),
             const SizedBox(height: 40),
 
-            _buildLanguageTile(context, '🇹🇳', 'العربية', 'Arabic', AppLanguage.arabic, langProvider),
+            _buildLanguageTile(
+                context, '🇹🇳', 'العربية', 'Arabic', AppLanguage.arabic, langProvider),
             const SizedBox(height: 12),
-            _buildLanguageTile(context, '🇫🇷', 'Français', 'French', AppLanguage.french, langProvider),
+            _buildLanguageTile(
+                context, '🇫🇷', 'Français', 'French', AppLanguage.french, langProvider),
             const SizedBox(height: 12),
-            _buildLanguageTile(context, '🗣️', 'Darija', 'Tunisian Arabic dialect', AppLanguage.darija, langProvider),
+            _buildLanguageTile(
+                context, '🗣️', 'Darija', 'Tunisian Arabic dialect', AppLanguage.darija, langProvider),
 
             const Spacer(),
 
@@ -45,7 +62,9 @@ class LanguageSelectionScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.mic, color: Colors.blue),
                   SizedBox(width: 12),
-                  Expanded(child: Text('Voice Input Available\nAll languages support voice commands')),
+                  Expanded(
+                    child: Text('Voice Input Available\nAll languages support voice commands'),
+                  ),
                 ],
               ),
             ),
@@ -55,11 +74,23 @@ class LanguageSelectionScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileCreationScreen()),
-                  );
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final hasAccount = prefs.getBool('hasAccount') ?? false;
+
+                  if (hasAccount) {
+                    // User already has an account → go directly to home/dashboard
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  } else {
+                    // New user → go to profile creation
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileCreationScreen()),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A2A6E),
@@ -78,8 +109,13 @@ class LanguageSelectionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguageTile(BuildContext context, String flag, String title, String subtitle,
-      AppLanguage lang, LanguageProvider provider) {
+  Widget _buildLanguageTile(
+      BuildContext context,
+      String flag,
+      String title,
+      String subtitle,
+      AppLanguage lang,
+      LanguageProvider provider) {
     final isSelected = provider.currentLanguage == lang;
 
     return GestureDetector(
