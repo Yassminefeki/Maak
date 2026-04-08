@@ -7,9 +7,13 @@ import 'core/constants/app_strings.dart';
 import 'core/providers/language_provider.dart';
 import 'core/providers/accessibility_provider.dart';
 import 'screens/tunisia_connect_screen.dart';
+import 'screens/optimizer_screen.dart';
+import 'screens/cv_navigation_screen.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
 
   // Optional: Lock app in portrait mode
   SystemChrome.setPreferredOrientations([
@@ -61,7 +65,15 @@ class AdminProcessApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
 
-          home: const TunisiaConnectScreen(),
+          initialRoute: '/optimizer',
+          routes: {
+            '/': (_) => const TunisiaConnectScreen(),
+            '/optimizer': (_) => const OptimizerScreen(),
+            '/cv': (_) => const CVNavigationScreen(
+              targetGuichet: 'Guichet 3',
+              userQueueNumber: 53,
+            ),
+          },
         );
       },
     );

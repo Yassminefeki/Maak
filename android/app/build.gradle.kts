@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.admin_process"
-        minSdk = 24         // flutter_tts requires at least 24
+        minSdk = 21         // changed to 21 for flutter_local_notifications support
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
