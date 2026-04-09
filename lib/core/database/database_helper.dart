@@ -1,6 +1,6 @@
-import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../../models/user_profile.dart';
+import '../../models/procedure.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -8,50 +8,84 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  // ✅ Get database
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('adminprocess.db');
+    _database = await _initDB('maak.db');
     return _database!;
   }
 
+  // ✅ Initialize DB
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
   }
 
+  // ✅ CREATE TABLE (YOUR SQL HERE ✔️)
   Future<void> _createDB(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE user_profile (
+      CREATE TABLE procedures (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        fullName TEXT NOT NULL,
-        cin TEXT NOT NULL,
-        address TEXT NOT NULL,
-        dob TEXT NOT NULL,
-        phone TEXT NOT NULL
+        key TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        steps TEXT,
+        required_documents TEXT,
+        cost TEXT,
+        time_required TEXT,
+        where_to_go TEXT,
+        important_notes TEXT
       )
     ''');
   }
+  Future<Map<String, dynamic>?> getProfile() async {
+    final db = await database;
 
-  Future<int> insertProfile(UserProfile profile) async {
-    final db = await instance.database;
-    return await db.insert('user_profile', profile.toMap());
+    final result = await db.query('profil', limit: 1);
+
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
+  }
+  // ✅ INSERT DEFAULT DATA
+  Future<void> insertDefaultProcedures() async {
+    final db = await database;
+
+    await db.insert('procedures', {
+      'key': 'lost_cin',
+      'title': 'فقدت بطاقة التعريف',
+      'description': 'دليل كامل لاستبدال بطاقة التعريف الوطنية',
+      'steps':
+          '1. الذهاب إلى أقرب مركز شرطة||2. تقديم شكوى فقدان||3. التوجه إلى البلدية||4. دفع الرسوم||5. استلام البطاقة الجديدة',
+      'required_documents':
+          'صورة شمسية||نسخة من بطاقة قديمة (إن وجدت)||شهادة إقامة||وصل دفع',
+      'cost': '15 دينار',
+      'time_required': '7 إلى 15 يوم',
+      'where_to_go': 'مركز الشرطة + البلدية',
+      'important_notes': 'يجب الإبلاغ فوراً لتفادي الاستعمال السيء',
+    });
   }
 
-  Future<UserProfile?> getProfile() async {
-    final db = await instance.database;
-    final maps = await db.query('user_profile', limit: 1);
-    if (maps.isEmpty) return null;
-    return UserProfile.fromMap(maps.first);
-  }
+  // ✅ GET PROCEDURE
+  Future<Procedure?> getProcedure(String key) async {
+    final db = await database;
 
-  Future<int> updateProfile(UserProfile profile) async {
-    final db = await instance.database;
-    return await db.update(
-      'user_profile',
-      profile.toMap(),
-      where: 'id = ?',
-      whereArgs: [profile.id],
+    final maps = await db.query(
+      'procedures',
+      where: 'key = ?',
+      whereArgs: [key],
     );
+
+    if (maps.isNotEmpty) {
+      return Procedure.fromMap(maps.first);
+    }
+    return null;
   }
 }

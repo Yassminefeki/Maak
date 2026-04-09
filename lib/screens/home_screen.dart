@@ -29,9 +29,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadProfile();
   }
 
+  // ✅ FIXED: convert Map -> UserProfile
   Future<void> _loadProfile() async {
-    final profile = await DatabaseHelper.instance.getProfile();
-    if (mounted) {
+    final data = await DatabaseHelper.instance.getProfile();
+    if (data != null && mounted) {
+      final profile = UserProfile.fromMap(data);
       setState(() => _userProfile = profile);
     }
   }
@@ -81,6 +83,17 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 👋 Optional greeting
+              if (_userProfile != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    '👋 Bonjour ${_userProfile!.fullName}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                ),
+
               // 🔔 Notification Banner
               Container(
                 padding: const EdgeInsets.all(14),
