@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/language_provider.dart';
 import '../core/providers/accessibility_provider.dart';
@@ -17,6 +18,8 @@ class ProcedureAssistantScreen extends StatefulWidget {
 class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isListening = false;
+  bool _isSpeaking = false;
+  late FlutterTts _tts;
 
   // ✅ Provide all required fields for Procedure
   final List<Procedure> _commonProcedures = [
@@ -64,16 +67,221 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
     ),
   ];
 
-  Future<void> _startVoiceInput() async {
-    setState(() => _isListening = true);
-    final text = await VoiceService.listen();
-    if (text.isNotEmpty) {
-      setState(() => _searchController.text = text);
-    }
-    setState(() => _isListening = false);
+  @override
+  void initState() {
+    super.initState();
+    _tts = FlutterTts();
+    _initTTS();
+    // Speak welcome message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _speakWelcomeMessage();
+    });
   }
 
-  void _onProcedureTap(Procedure procedure) {
+  Future<void> _initTTS() async {
+    await _tts.setLanguage('ar_TN');
+    await _tts.setPitch(1.0);
+    await _tts.setSpeechRate(0.5);
+  }
+
+  Future<void> _speakText(String text) async {
+    if (text.isEmpty) return;
+    setState(() => _isSpeaking = true);
+    try {
+      await _tts.speak(text);
+      await Future.delayed(const Duration(milliseconds: 500));
+    } catch (e) {
+      debugPrint('TTS error: $e');
+    } finally {
+      setState(() => _isSpeaking = false);
+    }
+  }
+
+  Future<void> _speakWelcomeMessage() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    await _speakText(lang.t('welcome_procedure') ?? 'Welcome to Procedure Assistant. You can search for administrative procedures by voice or text.');
+  }
+
+  void _showVoiceInstructionsBottomSheet(LanguageProvider lang) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.mic, color: const Color(0xFF1E3A8A), size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  lang.t('voice_search_instructions'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _buildInstructionStep(
+              number: 1,
+              title: lang.t('say_procedure'),
+              description: lang.t('say_procedure_desc') ?? 'Say what administrative procedure you need help with',
+              icon: Icons.record_voice_over,
+            ),
+            const SizedBox(height: 16),
+            _buildInstructionStep(
+              number: 2,
+              title: lang.t('wait_recognition'),
+              description: lang.t('wait_recognition_desc') ?? 'Wait for the system to recognize and process your request',
+              icon: Icons.hourglass_empty,
+            ),
+            const SizedBox(height: 16),
+            _buildInstructionStep(
+              number: 3,
+              title: lang.t('view_results'),
+              description: lang.t('view_results_desc') ?? 'Review the procedures that match your needs',
+              icon: Icons.checklist,
+            ),
+            const SizedBox(height: 24),
+            _buildTipsContainer(lang),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _startVoiceInput();
+                },
+                icon: const Icon(Icons.mic),
+                label: Text(lang.t('start_voice_search')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstructionStep({
+    required int number,
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E3A8A).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Center(
+            child: Text(
+              '$number',
+              style: const TextStyle(
+                color: Color(0xFF1E3A8A),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                description,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTipsContainer(LanguageProvider lang) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb, color: Colors.amber.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                lang.t('helpful_tips'),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '• ${lang.t('tip_speak_clearly')}\n'
+            '• ${lang.t('tip_natural_language')}\n'
+            '• ${lang.t('tip_pause_between')}',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.amber.shade700,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _startVoiceInput() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    
+    // Provide audio instruction
+    await _speakText(lang.t('say_procedure_name') ?? 'Please say the procedure you need help with');
+    
+    setState(() => _isListening = true);
+    try {
+      final text = await VoiceService.listen();
+      if (text.isNotEmpty) {
+        setState(() => _searchController.text = text);
+        await _speakText(lang.t('search_in_progress') ?? 'Searching for matching procedures...');
+      }
+    } catch (e) {
+      await _speakText(lang.t('voice_error') ?? 'Error with voice input. Please try again.');
+    } finally {
+      setState(() => _isListening = false);
+    }
+  }
+
+  void _onProcedureTap(Procedure procedure, LanguageProvider lang) {
+    // Announce procedure selection
+    _speakText('${lang.t('selected')}: ${procedure.title}');
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -101,6 +309,14 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
             AppStrings.get(context, 'procedure_assistant') ?? 'Procedure Assistant',
             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              color: Colors.white,
+              onPressed: () => _showVoiceInstructionsBottomSheet(langProvider),
+              tooltip: langProvider.t('help'),
+            ),
+          ],
           elevation: 0,
         ),
         body: SingleChildScrollView(
@@ -120,6 +336,38 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Voice Indicator
+              if (_isListening)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.red,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        langProvider.t('listening'),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_isListening) const SizedBox(height: 16),
+
               // Search Bar
               Container(
                 decoration: BoxDecoration(
@@ -132,6 +380,11 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
                 child: TextField(
                   controller: _searchController,
                   textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  onChanged: (value) {
+                    if (value.isNotEmpty) {
+                      _speakText(langProvider.t('searching') ?? 'Searching for procedures...');
+                    }
+                  },
                   decoration: InputDecoration(
                     hintText: AppStrings.get(context, 'search_hint_procedure') ?? 'I lost my CIN...',
                     hintStyle: const TextStyle(color: Colors.grey),
@@ -142,7 +395,7 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
                         color: _isListening ? Colors.red : const Color(0xFF1E3A8A),
                         size: 28,
                       ),
-                      onPressed: _startVoiceInput,
+                      onPressed: _isListening ? null : () => _showVoiceInstructionsBottomSheet(langProvider),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -163,7 +416,7 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
 
               ..._commonProcedures.map((proc) => _buildProcedureItem(
                     procedure: proc,
-                    onTap: () => _onProcedureTap(proc),
+                    onTap: () => _onProcedureTap(proc, langProvider),
                   )),
             ],
           ),
@@ -218,5 +471,12 @@ class _ProcedureAssistantScreenState extends State<ProcedureAssistantScreen> {
         onTap: onTap,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _tts.stop();
+    super.dispose();
   }
 }
