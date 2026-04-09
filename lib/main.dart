@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // ← Add this import
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/constants/app_strings.dart';
 import 'core/providers/language_provider.dart';
@@ -13,6 +14,7 @@ import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await NotificationService.init();
 
   // Optional: Lock app in portrait mode
@@ -58,7 +60,6 @@ class AdminProcessApp extends StatelessWidget {
             Locale('fr', 'FR'),
           ],
 
-          // ← This was missing → now fixed
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -70,9 +71,9 @@ class AdminProcessApp extends StatelessWidget {
             '/': (_) => const TunisiaConnectScreen(),
             '/optimizer': (_) => const OptimizerScreen(),
             '/cv': (_) => const CVNavigationScreen(
-              targetGuichet: 'Guichet 3',
-              userQueueNumber: 53,
-            ),
+                  targetGuichet: 'Guichet 3',
+                  userQueueNumber: 53,
+                ),
           },
         );
       },

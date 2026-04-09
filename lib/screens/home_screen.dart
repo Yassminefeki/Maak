@@ -11,6 +11,7 @@ import 'office_finder_screen.dart';
 import 'visit_optimizer_screen.dart';
 import 'accessibility_settings_screen.dart';
 import '../core/constants/app_strings.dart';
+import 'chatbot_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -302,6 +303,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.person),
                 label: AppStrings.get(context, 'profile')),
           ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+            );
+          },
+          backgroundColor: const Color(0xFF1D9E75),
+          elevation: 4,
+          child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
         ),
       ),
     );

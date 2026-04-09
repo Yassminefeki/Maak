@@ -5,27 +5,29 @@ plugins {
 }
 
 android {
+
     namespace = "com.example.admin_process"
 
-    compileSdk = 36
-    ndkVersion = "27.0.12077973"
-
-    defaultConfig {
-        applicationId = "com.example.admin_process"
-        minSdk = 24
-        targetSdk = 36
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-    }
+    // Explicit SDK versions to match plugin requirements
+    compileSdk = 36        // Required by flutter_tts
+    ndkVersion = "28.2.13676358" // Required by multiple plugins
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        isCoreLibraryDesugaringEnabled = true // ✅ Kotlin DSL uses `isCoreLibraryDesugaringEnabled`
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    defaultConfig {
+        applicationId = "com.example.admin_process"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     buildTypes {
@@ -36,7 +38,6 @@ android {
 }
 
 dependencies {
-    // ✅ Kotlin DSL syntax
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 }
 

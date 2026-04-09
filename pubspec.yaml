@@ -43,13 +43,15 @@ dependencies:
   flutter_local_notifications: ^17.0.0
 
   # AI Integration
-  google_generative_ai: ^0.4.0
+  google_generative_ai: ^0.4.7
+  flutter_dotenv: ^6.0.0
 
   # Internationalization
   intl: ^0.19.0
   permission_handler: ^11.3.0
   sqflite: ^2.3.3
   path: ^1.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -61,12 +63,4 @@ flutter:
   # Assets
   assets:
     - assets/images/
-    # Add more folders later if needed:
-    # - assets/procedures.json
-    # - assets/icons/
-
-  # Recommended: Add custom fonts if needed in the future
-  # fonts:
-  #   - family: CustomArabicFont
-  #     fonts:
-  #       - asset: assets/fonts/ArabicFont-Regular.ttf
+    - .env
