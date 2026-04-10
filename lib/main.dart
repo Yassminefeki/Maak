@@ -11,6 +11,7 @@ import 'screens/tunisia_connect_screen.dart';
 import 'screens/optimizer_screen.dart';
 import 'screens/cv_navigation_screen.dart';
 import 'screens/ai_form_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -21,6 +22,7 @@ void main() async {
   // Optional: Lock app in portrait mode
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
     DeviceOrientation.portraitDown,
   ]);
 
@@ -67,9 +69,10 @@ class AdminProcessApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
 
-          initialRoute: '/optimizer',
+          initialRoute: '/',
           routes: {
-            '/': (_) => const TunisiaConnectScreen(),
+            '/': (_) => const SplashScreen(),
+            '/connect': (_) => const TunisiaConnectScreen(),
             '/optimizer': (_) => const OptimizerScreen(),
             '/cv': (_) => const CVNavigationScreen(
                   targetGuichet: 'Guichet 3',
