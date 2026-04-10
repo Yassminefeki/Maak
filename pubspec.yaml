@@ -39,7 +39,7 @@ dependencies:
 
   # AR Navigation (sensors + compass)
   sensors_plus: ^4.0.2
-  flutter_compass: ^0.7.0
+  flutter_compass: ^0.8.1
 
   # Maps
   flutter_map: ^7.0.2

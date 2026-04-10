@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/text_recognition_service.dart';
@@ -12,6 +14,7 @@ import '../widgets/ar_analysis_result_panel.dart';
 class CVNavigationScreen extends StatefulWidget {
   /// Guichet cible pré-rempli depuis l'optimizer (optionnel)
   final String? targetGuichet;
+
   /// Numéro de file de l'utilisateur (optionnel)
   final int? userQueueNumber;
 
@@ -27,7 +30,6 @@ class CVNavigationScreen extends StatefulWidget {
 
 class _CVNavigationScreenState extends State<CVNavigationScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-
   // ── Camera ──────────────────────────────────────────────────────
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
@@ -59,10 +61,10 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
   late AnimationController _radarController;
 
   // ── Colors (Maak design) ────────────────────────────────────────
-  static const Color _maakBlue   = Color(0xFF1E40AF);
+  static const Color _maakBlue = Color(0xFF1E40AF);
   static const Color _maakDarkBlue = Color(0xFF1E3A8A);
-  static const Color _maakTeal   = Color(0xFF1D9E75);
-  static const Color _maakLight  = Color(0xFF60A5FA);
+  static const Color _maakTeal = Color(0xFF1D9E75);
+  static const Color _maakLight = Color(0xFF60A5FA);
 
   @override
   void initState() {
@@ -84,7 +86,7 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
           // Lerp position
           final destX = _actualTarget!.centerX;
           final destY = _actualTarget!.centerY;
-          
+
           if (_smoothX == 0) {
             _smoothX = destX;
             _smoothY = destY;
@@ -102,13 +104,14 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
           final dx = tx - (size.width / 2);
           final dy = ty - (size.height / 2);
           final targetAngle = math.atan2(dx, -dy);
-          
+
           // Smooth angle (handle wrap-around)
           _smoothAngle = _smoothAngle + (targetAngle - _smoothAngle) * 0.1;
 
           // Hysteresis check
-          if (_lastTargetSeen != null && 
-              DateTime.now().difference(_lastTargetSeen!).inMilliseconds > 1200) {
+          if (_lastTargetSeen != null &&
+              DateTime.now().difference(_lastTargetSeen!).inMilliseconds >
+                  1200) {
             _selectedTarget = null;
             _actualTarget = null;
             _smoothX = 0;
@@ -188,8 +191,7 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
       _detectedTargets = [];
       _selectedTarget = null;
     });
-    _processingTimer =
-        Timer.periodic(const Duration(milliseconds: 800), (_) {
+    _processingTimer = Timer.periodic(const Duration(milliseconds: 800), (_) {
       _captureAndAnalyze();
     });
   }
@@ -257,8 +259,8 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler',
-                style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Annuler', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -435,10 +437,12 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: _maakLight.withValues(alpha: 0.2), width: 0.5),
+                  border: Border.all(
+                      color: _maakLight.withValues(alpha: 0.2), width: 0.5),
                 ),
                 child: CustomPaint(
-                  painter: _CrosshairPainter(color: _maakLight.withValues(alpha: 0.5)),
+                  painter: _CrosshairPainter(
+                      color: _maakLight.withValues(alpha: 0.5)),
                 ),
               ),
             ),
@@ -492,8 +496,8 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
             SizedBox(
               width: 12,
               height: 12,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: _maakLight),
+              child:
+                  CircularProgressIndicator(strokeWidth: 2, color: _maakLight),
             ),
             SizedBox(width: 8),
             Text('Analyse…',
@@ -540,8 +544,8 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
             Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(
-                  shape: BoxShape.circle, color: _maakTeal),
+              decoration:
+                  const BoxDecoration(shape: BoxShape.circle, color: _maakTeal),
             ),
             const SizedBox(width: 8),
             Column(
@@ -561,8 +565,7 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                   Text(
                     'Cible : ${widget.targetGuichet}',
                     style: TextStyle(
-                        color: _maakLight.withValues(alpha: 0.9),
-                        fontSize: 11),
+                        color: _maakLight.withValues(alpha: 0.9), fontSize: 11),
                   ),
               ],
             ),
@@ -575,15 +578,12 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                 decoration: BoxDecoration(
                   color: _maakBlue.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: _maakLight.withValues(alpha: 0.5)),
+                  border: Border.all(color: _maakLight.withValues(alpha: 0.5)),
                 ),
                 child: Text(
                   '${_detectedTargets.length} texte(s)',
                   style: const TextStyle(
-                      color: _maakLight,
-                      fontSize: 11,
-                      fontFamily: 'monospace'),
+                      color: _maakLight, fontSize: 11, fontFamily: 'monospace'),
                 ),
               ),
           ],
@@ -593,7 +593,6 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
   }
 
   Widget _buildControlPanel() {
-
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -634,13 +633,13 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(23),
-                        border: Border.all(
-                            color: _maakBlue.withValues(alpha: 0.4)),
+                        border:
+                            Border.all(color: _maakBlue.withValues(alpha: 0.4)),
                       ),
                       child: TextField(
                         controller: _searchController,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: InputDecoration(
                           hintText: 'Rechercher un guichet…',
                           hintStyle: TextStyle(
@@ -719,9 +718,7 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: (_isScanning
-                                    ? Colors.red
-                                    : _maakBlue)
+                            color: (_isScanning ? Colors.red : _maakBlue)
                                 .withValues(alpha: 0.45),
                             blurRadius: 22,
                             spreadRadius: 3,
@@ -818,8 +815,10 @@ class _CornerFramePainter extends CustomPainter {
     const margin = 20.0;
 
     // Top-left
-    canvas.drawLine(Offset(margin, margin + len), Offset(margin, margin), paint);
-    canvas.drawLine(Offset(margin, margin), Offset(margin + len, margin), paint);
+    canvas.drawLine(
+        Offset(margin, margin + len), Offset(margin, margin), paint);
+    canvas.drawLine(
+        Offset(margin, margin), Offset(margin + len, margin), paint);
 
     // Top-right
     canvas.drawLine(Offset(size.width - margin - len, margin),
@@ -883,7 +882,9 @@ class _RadarPainter extends CustomPainter {
     for (int i = 0; i < 4; i++) {
       final angle = i * 3.14159 / 2;
       canvas.drawLine(
-        center + Offset(math.cos(angle) * (radius * 0.9), math.sin(angle) * (radius * 0.9)),
+        center +
+            Offset(math.cos(angle) * (radius * 0.9),
+                math.sin(angle) * (radius * 0.9)),
         center + Offset(math.cos(angle) * radius, math.sin(angle) * radius),
         tickPaint..color = color.withValues(alpha: 0.4),
       );
@@ -937,7 +938,7 @@ class _ScanlinePainter extends CustomPainter {
     for (double i = 0; i < size.height; i += 4) {
       canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
     }
-    
+
     // Subtle vignette
     final vignettePaint = Paint()
       ..shader = RadialGradient(
@@ -947,8 +948,9 @@ class _ScanlinePainter extends CustomPainter {
         ],
         stops: const [0.6, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), vignettePaint);
+
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height), vignettePaint);
   }
 
   @override
