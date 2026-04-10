@@ -1,137 +1,184 @@
 # Maak (معاك) 🤝
-> **Empowering administrative accessibility in Tunisia through AI, Computer Vision, and Predictive Analytics.**
+> **Redefining Administrative Accessibility in Tunisia through AI, Computer Vision, and Predictive Analytics.**
 
-Maak is a sophisticated, AI-driven administrative assistant designed specifically to bridge the accessibility gap for people with disabilities in Tunisia. By merging Generative AI, Computer Vision, and real-time AR navigation, Maak transforms how citizens interact with public services.
+[![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 📖 Table of Contents
+1. [Vision & Impact](#-vision--impact)
+2. [Project Architecture](#-project-architecture)
+3. [Core Services Deep-Dive](#-core-services-deep-dive)
+    - [🧠 Generative AI Assistant](#-generative-ai-assistant)
+    - [👁️ AR & Computer Vision Navigation](#-ar--computer-vision-navigation)
+    - [📊 Predictive Visit Optimizer](#-predictive-visit-optimizer)
+    - [📠 Intelligent Form Automation](#-intelligent-form-automation)
+4. [Technical Specifications](#-technical-specifications)
+    - [Frontend Architecture](#frontend-architecture)
+    - [Backend Architecture](#backend-architecture)
+5. [Database & Data Models](#-database--data-models)
+6. [Engineering Setup Guide](#-engineering-setup-guide)
+7. [Future Roadmap](#-future-roadmap)
+8. [FAQ & Troubleshooting](#-faq--troubleshooting)
+
+---
+
+## 🌟 Vision & Impact
+
+Maak (معاك - meaning "With You") is a socio-technical solution designed to transform the administrative experience for citizens in Tunisia, with a primary focus on individuals with disabilities. 
+
+Tunisian administrative procedures are often complex and physically taxing. Maak bridges this gap by providing:
+- **Linguistic Inclusivity**: Full support for Standard Arabic, French, and **Tunisian Darija**.
+- **Cognitive Simplification**: Breaking down complex legal jargon into actionable steps.
+- **Physical Guidance**: Using AR to eliminate the stress of navigating large government offices.
 
 ---
 
 ## 🏛️ Project Architecture
 
+The system is built as a distributed intelligence platform, balancing on-device edge AI with scalable cloud-based generative models.
+
 ```mermaid
 graph TD
-    A[Flutter App] -->|REST/JSON| B[FastAPI Backend]
-    A -->|Stream| C[Google ML Kit]
-    A -->|Prompt| D[Gemini 1.5 Flash]
-    B -->|OCR| E[Tesseract Engine]
-    B -->|PDF| F[ReportLab Generation]
-    A -->|Encrypted| G[SQLCipher Local DB]
-    A -->|Sensors| H[AR HUD Navigation]
+    subgraph Frontend [Flutter Mobile App]
+        UI[Material 3 UI]
+        SP[Language Provider]
+        DB[SQLCipher Encrypted DB]
+    end
+
+    subgraph Intelligence [AI & ML Layer]
+        GEM[Gemini 1.5 Flash]
+        MLK[Google ML Kit]
+        AR[Sensor Fusion HUD]
+    end
+
+    subgraph Backend [FastAPI Microservices]
+        API[FastAPI Router]
+        OCR[Tesseract Engine]
+        PDF[ReportLab PDF Gen]
+    end
+
+    UI -->|Intent| GEM
+    UI -->|OCR Stream| MLK
+    UI -->|REST| API
+    UI -->|Sensors| AR
+    API --> OCR
+    API --> PDF
 ```
 
 ---
 
-## 🚀 Key Services & Technical Deep-Dive
+## 🚀 Core Services Deep-Dive
 
-### 🧠 Generative AI & Administrative Intent Detection
-Maak uses **Google Gemini 1.5 Flash** to provide context-aware administrative guidance. 
-- **Intent Matching**: A specialized `ProcedureDetectionService` maps natural language inputs to specific Tunisian administrative workflows (CIN, Cnam, Passport, etc.).
-- **Confidence Scoring**: The service uses zero-shot prompting to return structured JSON with confidence ratings, ensuring high-accuracy redirection.
+### 🧠 Generative AI Assistant
+The AI layer is the brain of Maak, powered by **Google Gemini 1.5 Flash**.
+- **Liguistic Mapping**: The system uses a `LanguageProvider` and `AppStrings` architecture to manage bidirectional (RTL) Arabic/Darija alongside LTR French.
+- **Intent Detection**: The `ProcedureDetectionService` uses zero-shot prompting to categorize user queries into 8+ predefined administrative procedures (CIN, CNAM, Passport, etc.).
+- **Voice-First Integration**: Combined with `speech_to_text` and `flutter_tts`, users can navigate the entire app hands-free.
 
 ### 👁️ AR & Computer Vision Navigation
-The navigation module (`CVNavigationScreen`) provides a heads-up display (HUD) for indoor guidance.
-- **Dynamic Tracking**: Leverages `google_mlkit_text_recognition` to identify office signage in real-time.
-- **Smoothing Logic**: 
-    - **Lerp (Linear Interpolation)**: Floating AR elements use a 0.15 lerp factor to prevent visual jitter and provide smooth movement.
-    - **Hysteresis Persistence**: Implements a 1,200ms cooldown timer to maintain target focus even if the text is briefly obscured.
-- **HUD Components**: Custom-painted Radar, Crosshair, and Scanline animations provide a high-tech, accessible interface.
+The `CVNavigationScreen` is a high-performance AR environment designed for indoor localization.
+- **HUD (Heads-Up Display)**: Built using `CustomPaint`, it renders a real-time Radar, Crosshair, and stylized scanlines.
+- **Technical Constants**:
+    - **Smoothing (Lerp)**: Linear interpolation with a `0.15` factor ensures that AR targets follow the camera feed without visual lag.
+    - **Hysteresis Persistence**: A `1200ms` window allows targets to remain "active" in the UI even if the camera briefly loses focus.
+- **Math Logic**: Uses `math.atan2` for calculating the relative angle of targets to the user's viewport, driving the direction of the AR guidance arrow.
 
-### 📊 Visit Optimizer Algorithm
-The `OptimizerService` predicts the best time to visit an office by blending historical and live data:
-- **The Blended Score Formula**: 
+### 📊 Predictive Visit Optimizer
+The `OptimizerService` implements a unique **Blended Scoring Algorithm** to predict office crowd density.
+- **Mathematical Model**:
   $$Score = (HistoricalData \times 0.6) + (UserFeedback \times 0.4)$$
-- **Procedure Weighting**: Adjusts wait-time predictions based on the complexity of the specific administrative task requested.
-- **Interactive Heatmap**: A custom `HeatmapGrid` visualizes peak hours across the Tunisian work week.
+- **Procedure Weights**: Different administrative tasks (e.g., renewing a CIN vs. a Birth Certificate) have distinct "time-tax" multipliers applied during calculation.
+- **Heatmap Visualization**: A custom `HeatmapGrid` widget visualizes the 0-100 density score across the Tunisian work week.
 
 ### 📠 Intelligent Form Automation
-Simplifies the daunting task of filling administrative forms through deep integration between mobile and server layers.
-- **Frontend Flow**: ML Kit extracts text blocks from physical forms.
-- **Backend Flow**: A **FastAPI** service uses `pytesseract` for high-precision OCR and then maps extracted data to the user’s encrypted profile.
-- **Output**: Generates a print-ready, legally formatted PDF using `ReportLab`.
-
-### 🔐 Security & Data Privacy
-Given the sensitivity of administrative data, Maak implements multi-layered security:
-- **Encryption**: The local SQLite database is fully encrypted using **SQLCipher**.
-- **Secure Storage**: API keys and session tokens are managed via **Flutter Secure Storage** (Keychain/Keystore).
-- **Privacy First**: Sensitive OCR processing can be targeted to run entirely on-device or on a private backend instance.
+Simplifies physical paperwork by digitizing localized forms.
+- **OCR Flow**: The `TextRecognitionService` (ML Kit) extracts raw text blocks, which are then transmitted to the Python backend.
+- **Backend Mapping**: The FastAPI layer uses `pytesseract` and Levenshtein distance algorithms to map OCR text to the user's `UserProfile` fields.
+- **PDF Generation**: `ReportLab` is used to create legally compliant, print-ready PDF documents automatically filled with user data.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technical Specifications
 
-| Layer | Technology |
-| :--- | :--- |
-| **Frontend** | Flutter, Provider, Google ML Kit, Sensors Plus |
-| **Backend** | Python, FastAPI, SQLAlchemy, Tesseract OCR |
-| **AI/ML** | Google Gemini 1.5 Flash |
-| **Database** | SQLite (SQLCipher), Shared Preferences |
-| **Reports** | ReportLab (PDF Generation) |
+### Frontend Architecture (Dart/Flutter)
+- **State Management**: `Provider` for reactive UI updates and global state.
+- **Local Storage**: 
+    - **SQLCipher**: For encrypted persistence of sensitive profile data.
+    - **Shared Preferences**: For lightweight settings and onboarding flags.
+- **Security**: `flutter_secure_storage` for managing device-specific encryption keys.
+
+### Backend Architecture (Python/FastAPI)
+- **Framework**: FastAPI (Asynchronous Python) for ultra-low latency.
+- **ORM**: SQLAlchemy for managing the User Profile and Feedback databases.
+- **OCR Engine**: Tesseract v5.0+ with specialized training for administrative fonts.
 
 ---
 
-## ⚙️ Installation & Engineering Setup
+## 📂 Database & Data Models
 
-### 1. System Requirements
-- **Flutter SDK**: `^3.4.3`
-- **Python**: `3.9+`
-- **Tesseract OCR**: Required for backend services. 
-    - *Windows*: Download from [UB-Mannheim](https://github.com/UB-Mannheim/tesseract/wiki).
-    - *Linux*: `sudo apt install tesseract-ocr`.
+### Key Entities
+| Model | Purpose | Key Attributes |
+| :--- | :--- | :--- |
+| **UserProfile** | Secure user data | `cin_number`, `full_name`, `dob`, `address` |
+| **BestSlot** | Optimization result | `day`, `time_label`, `blended_score` |
+| **DetectedTarget** | CV identification | `text`, `boundingBox`, `confidence` |
+| **FeedbackModel** | Crowdsourced data | `office_id`, `rating`, `timestamp` |
 
-### 2. Frontend Setup
-```bash
-# Clone and enter directory
-git clone https://github.com/Yassminefeki/Maak.git && cd Maak
+---
 
-# Fetch dependencies
-flutter pub get
+## ⚙️ Engineering Setup Guide
 
-# Setup Environments
-# Create .env in root with:
-# GEMINI_API_KEY=your_key_here
-```
+### 1. External Dependencies
+- **Flutter SDK**: `>= 3.4.3`
+- **Python**: `3.9 - 3.12`
+- **Tesseract OCR**: 
+    - *Ubuntu*: `sudo apt install tesseract-ocr`
+    - *Windows*: Add `tesseract.exe` to your System PATH and update `main.py` path constant.
 
-### 3. Backend Setup
+### 2. API Configuration
+1. Obtain a **Google Gemini API Key** from [AI Studio](https://aistudio.google.com/).
+2. Create a `.env` file in the project root:
+   ```env
+   GEMINI_API_KEY=your_key_here
+   ```
+
+### 3. Execution
+**Run Backend:**
 ```bash
 cd backend
-# Install dependencies
 pip install -r recuirement.txt
-
-# Launch FastAPI Dev Server
 uvicorn main:app --reload
 ```
 
----
-
-## 📂 Project Structure
-
-```text
-Maak/
-├── backend/            # Python FastAPI microservices
-│   ├── main.py         # OCR & PDF generation endpoints
-│   └── models.py       # SQLAlchemy ORM schemas
-├── lib/
-│   ├── core/           # Routing and accessibility themes
-│   ├── services/       # AI (Gemini) and AR (Sensors) logic
-│   ├── data/           # Repositories for SQLCipher & Feedback
-│   ├── screens/        # UI Layers (AR Nav, Chatbot, Optimizer)
-│   └── widgets/        # Custom HUD and Heatmap components
-└── assets/             # Localization and static resources
+**Run Mobile:**
+```bash
+flutter pub get
+flutter run
 ```
 
 ---
 
-## 🤝 Contributing & Support
-Interested in improving accessibility in Tunisia? 
-1. Fork the repo.
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
+## 🗺️ Future Roadmap
+
+- **Phase 1 (Q2 2026)**: Integration of real-time wait-list tracking via office IoT.
+- **Phase 2 (Q3 2026)**: Personalized voice signatures for automated phone inquiries.
+- **Phase 3 (Q4 2026)**: Expansion to multi-office "One Stop Shop" (Guichet Unique) procedures.
 
 ---
 
-## 📜 License
-Maak is distributed under the **MIT License**. See `LICENSE` for more information.
+## ❓ FAQ & Troubleshooting
+
+**Q: Why is the AR arrow jumping?**
+- *A: Ensure your device supports a Magnetometer (Compass) and Gyroscope. Calibration in a figure-8 motion may be required.*
+
+**Q: OCR is not detecting the form.**
+- *A: Check lighting conditions and ensure the form is flat. The backend relies on high-contrast images for `pytesseract` accuracy.*
+
+**Q: Can I use it without internet?**
+- *A: AR Navigation and Basic Procedures are available offline. AI Assistant and Visit Optimizer require an active connection.*
 
 ---
-*Created with ❤️ for a more inclusive Tunisia.*
+*Developed for a more inclusive and accessible Tunisian administration.*
