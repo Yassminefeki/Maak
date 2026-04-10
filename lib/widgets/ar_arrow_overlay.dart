@@ -150,111 +150,121 @@ class ARArrowPainter extends CustomPainter {
     canvas.translate(cx, cy);
     canvas.rotate(angle);
 
-    final offset = animValue * 15;
+    final offset = animValue * 20;
 
-    // Segmented Chevron Design
+    // --- 3D Solid Arrow Head Design ---
+    final arrowPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [color, color.withValues(alpha: 0.6)],
+      ).createShader(const Rect.fromLTWH(-20, -10, 40, 60))
+      ..style = PaintingStyle.fill;
+
+    final arrowPath = Path();
+    arrowPath.moveTo(0, 5 + offset); // Tip
+    arrowPath.lineTo(-20, 45 + offset); // Left Base
+    arrowPath.lineTo(0, 35 + offset); // Center Base (inward)
+    arrowPath.lineTo(20, 45 + offset); // Right Base
+    arrowPath.close();
+
+    // Side Depth Effect (Fake 3D)
+    canvas.drawPath(arrowPath, Paint()
+      ..color = Colors.black.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+    
+    canvas.drawPath(arrowPath, arrowPaint);
+
+    // Arrow Outline (Clarifier)
+    canvas.drawPath(arrowPath, Paint()
+      ..color = Colors.white.withValues(alpha: 0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8);
+
+    // Dynamic Trail Glow
     for (int i = 0; i < 3; i++) {
-      final stepOpacity = (1.0 - (i * 0.3)) * (1.0 - animValue * 0.5);
-      final stepOffset = (i * 20.0) - offset;
+      final trailOpacity = (1.0 - (i * 0.3)) * (1.0 - animValue);
+      final trailOffset = (i * 22.0) + offset;
       
-      if (stepOffset < 0) continue;
-
-      final p = Paint()
-        ..color = color.withValues(alpha: stepOpacity)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.5 - (i * 0.8)
-        ..strokeCap = StrokeCap.round;
-
-      final path = Path();
-      path.moveTo(-15 + (i * 2), 40 + stepOffset);
-      path.lineTo(0, 25 + stepOffset);
-      path.lineTo(15 - (i * 2), 40 + stepOffset);
-      
-      canvas.drawPath(path, p);
-      
-      // Glow for the first chevron
-      if (i == 0) {
-        canvas.drawPath(path, Paint()
-          ..color = color.withValues(alpha: 0.3 * stepOpacity)
+      canvas.drawPath(
+        Path()
+          ..moveTo(-12, 50 + trailOffset)
+          ..lineTo(0, 42 + trailOffset)
+          ..lineTo(12, 50 + trailOffset),
+        Paint()
+          ..color = color.withValues(alpha: trailOpacity * 0.4)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 8
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-      }
+          ..strokeWidth = 3.0 - i
+          ..strokeCap = StrokeCap.round
+      );
     }
 
-    // Core Indicator
-    canvas.drawCircle(
-      Offset.zero,
-      6,
-      Paint()
-        ..color = color.withValues(alpha: 0.2)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawCircle(
-      Offset.zero,
-      6,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
+    // Core Center Point
+    canvas.drawCircle(Offset.zero, 5, Paint()..color = Colors.white.withValues(alpha: 0.9));
 
     canvas.restore();
     _drawDirectionLabel(canvas, size, color);
   }
 
   void _drawTargetPoint(Canvas canvas, Color color) {
-    // Holographic Target Marker
-    final haloPaint = Paint()
-      ..color = color.withValues(alpha: 0.1 + animValue * 0.1)
-      ..style = PaintingStyle.fill;
+    // Holographic Target Marker (More Pronounced)
+    final glowPaint = Paint()
+      ..color = color.withValues(alpha: 0.15 + animValue * 0.15)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
     
-    canvas.drawCircle(Offset(targetX, targetY), 25 + animValue * 10, haloPaint);
+    canvas.drawCircle(Offset(targetX, targetY), 35 + animValue * 15, glowPaint);
 
-    final ringPaint = Paint()
-      ..color = color.withValues(alpha: 0.6)
-      ..strokeWidth = 1.2
+    final lockPaint = Paint()
+      ..color = isMatch ? matchColor : color
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
 
-    // Rotating-like brackets around target
+    // High-Tech Lock-on Brackets
     canvas.save();
     canvas.translate(targetX, targetY);
-    canvas.rotate(animValue * math.pi);
+    canvas.rotate(animValue * math.pi * 0.5);
     
-    const bracketLen = 8.0;
-    const dist = 18.0;
+    const double bracketSize = 14.0;
+    const double dist = 22.0;
     
     for (int i = 0; i < 4; i++) {
       canvas.save();
       canvas.rotate(i * math.pi / 2);
-      canvas.drawLine(const Offset(dist, -bracketLen), const Offset(dist, bracketLen), ringPaint);
+      final path = Path()
+        ..moveTo(dist, dist - bracketSize)
+        ..lineTo(dist, dist)
+        ..lineTo(dist - bracketSize, dist);
+      canvas.drawPath(path, lockPaint);
       canvas.restore();
     }
     canvas.restore();
 
-    canvas.drawCircle(Offset(targetX, targetY), 4, Paint()..color = color);
+    // Central core pulse
+    canvas.drawCircle(Offset(targetX, targetY), 5, Paint()..color = color);
   }
 
   void _drawDashedLine(Canvas canvas, Offset start, Offset end, Color color) {
     final paint = Paint()
-      ..color = color.withValues(alpha: 0.25)
-      ..strokeWidth = 0.8
+      ..color = color.withValues(alpha: 0.4)
+      ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
 
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final len = math.sqrt(dx * dx + dy * dy);
-    if (len < 50) return; // Don't draw if too close
+    if (len < 40) return;
 
-    const dashLen = 4.0;
-    const gapLen = 8.0;
+    // Dynamic distance segments
+    const dashLen = 6.0;
+    const gapLen = 10.0;
     final totalLen = dashLen + gapLen;
     final steps = (len / totalLen).floor();
 
     for (int i = 0; i < steps; i++) {
       final t1 = i * totalLen / len;
       final t2 = (i * totalLen + dashLen) / len;
-      if (t2 > 1) break;
       canvas.drawLine(
         Offset(start.dx + dx * t1, start.dy + dy * t1),
         Offset(start.dx + dx * t2, start.dy + dy * t2),
@@ -264,53 +274,57 @@ class ARArrowPainter extends CustomPainter {
   }
 
   void _drawDistanceInfo(Canvas canvas, Size size, Color color) {
-    final normalizedDist = (distance / (size.width / 2) * 100).clamp(0, 100);
-    final distText = 'PROXIMITÉ : ${normalizedDist.toStringAsFixed(0)}%';
+    final normalizedDist = (distance / (size.width / 2) * 100).clamp(0, 100).toInt();
+    final distText = 'DISTANCE : $normalizedDist m';
 
     final tp = TextPainter(
       text: TextSpan(
         text: distText,
         style: TextStyle(
-          color: color.withValues(alpha: 0.8),
-          fontSize: 9,
+          color: color,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
           fontFamily: 'monospace',
-          letterSpacing: 1.2,
+          backgroundColor: Colors.black.withValues(alpha: 0.6),
+          letterSpacing: 1.5,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    tp.paint(canvas, Offset(size.width / 2 - tp.width / 2, size.height / 2 + 50));
+    tp.paint(canvas, Offset(size.width / 2 - tp.width / 2, size.height / 2 + 55));
   }
 
   void _drawDirectionLabel(Canvas canvas, Size size, Color color) {
     final deg = (angle * 180 / math.pi + 360) % 360;
     String label;
-    if (deg < 22.5 || deg >= 337.5) label = 'DIRECTION : NORD';
-    else if (deg < 67.5) label = 'DIRECTION : NE';
-    else if (deg < 112.5) label = 'DIRECTION : EST';
-    else if (deg < 157.5) label = 'DIRECTION : SE';
-    else if (deg < 202.5) label = 'DIRECTION : SUD';
-    else if (deg < 247.5) label = 'DIRECTION : SO';
-    else if (deg < 292.5) label = 'DIRECTION : OUEST';
-    else label = 'DIRECTION : NO';
+    if (deg < 22.5 || deg >= 337.5) label = 'NORD';
+    else if (deg < 67.5) label = 'NE';
+    else if (deg < 112.5) label = 'EST';
+    else if (deg < 157.5) label = 'SE';
+    else if (deg < 202.5) label = 'SUD';
+    else if (deg < 247.5) label = 'SO';
+    else if (deg < 292.5) label = 'OUEST';
+    else label = 'NO';
+
+    final fullLabel = 'COORD : $label [${deg.toInt()}°]';
 
     final tp = TextPainter(
       text: TextSpan(
-        text: label,
+        text: fullLabel,
         style: TextStyle(
-          color: color.withValues(alpha: 0.6),
-          fontSize: 8,
+          color: color.withValues(alpha: 0.8),
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
           fontFamily: 'monospace',
+          backgroundColor: Colors.black.withValues(alpha: 0.4),
           letterSpacing: 2,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    tp.paint(canvas,
-        Offset(size.width / 2 - tp.width / 2, size.height / 2 + 70));
+    tp.paint(canvas, Offset(size.width / 2 - tp.width / 2, size.height / 2 + 75));
   }
 
   void _drawOnTargetEffect(Canvas canvas, Color color) {

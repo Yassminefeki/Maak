@@ -337,7 +337,12 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
           if (_isScanning) ...[
             _buildScanLine(),
             _buildRadarHUD(),
+            _buildTechnicalTelemetry(),
           ],
+
+          // ③ Detection Stream Log (Rolling telemetry)
+          if (_isScanning && _detectedTargets.isNotEmpty)
+            _buildDetectionLog(),
 
           // ③ Corner frame decoration
           _buildCornerFrame(),
@@ -455,12 +460,89 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                     angle: _radarController.value * 2 * 3.14159,
                     child: CustomPaint(
                       size: const Size(280, 280),
-                      painter: _RadarPainter(color: _maakLight),
+                      painter: _RadarPainter(color: _maakLight.withValues(alpha: 0.8)),
                     ),
                   );
                 },
               ),
             ),
+            // Radar Degree Markers
+            Center(
+              child: CustomPaint(
+                size: const Size(280, 280),
+                painter: _RadarMarkerPainter(color: _maakLight.withValues(alpha: 0.3)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTechnicalTelemetry() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 60,
+      left: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _telemetryItem('AZIMUTH', '${(_smoothAngle * 180 / 3.14).toStringAsFixed(1)}°'),
+          _telemetryItem('LATENCY', '${_isProcessing ? 142 : 44}ms'),
+          _telemetryItem('PITCH', '12.4°'),
+          _telemetryItem('YAW', '2.1°'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: _maakTeal.withValues(alpha: 0.2),
+              border: Border.all(color: _maakTeal.withValues(alpha: 0.5)),
+            ),
+            child: const Text('STREAM ACTIVE: 60FPS', 
+              style: TextStyle(color: _maakTeal, fontSize: 8, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _telemetryItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$label:', style: TextStyle(color: _maakLight.withValues(alpha: 0.5), fontSize: 9, fontFamily: 'monospace')),
+          const SizedBox(width: 4),
+          Text(value, style: const TextStyle(color: _maakLight, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetectionLog() {
+    return Positioned(
+      left: 20,
+      bottom: 180,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        width: 180,
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: _maakLight.withValues(alpha: 0.4), width: 1.5)),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Colors.black.withValues(alpha: 0.4), Colors.transparent],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('LOCAL_CV_STREAM_LOG:', style: TextStyle(color: Colors.white38, fontSize: 8, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            ..._detectedTargets.take(3).map((t) => Text(
+              '> DETECTED: ${t.text.toUpperCase()}', 
+              style: const TextStyle(color: Colors.white70, fontSize: 8, fontFamily: 'monospace', overflow: TextOverflow.ellipsis),
+            )),
           ],
         ),
       ),
@@ -843,7 +925,34 @@ class _CornerFramePainter extends CustomPainter {
   bool shouldRepaint(_CornerFramePainter old) => old.color != color;
 }
 
-// ── Radar Painter ──────────────────────────────────────────────────────────
+// ── Radar painters ───────────────────────────────────────────────────────
+
+class _RadarMarkerPainter extends CustomPainter {
+  final Color color;
+  _RadarMarkerPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (int i = 0; i < 360; i += 30) {
+      final angle = i * 3.14159 / 180;
+      final x1 = cx + math.cos(angle) * 130;
+      final y1 = cy + math.sin(angle) * 130;
+      final x2 = cx + math.cos(angle) * 140;
+      final y2 = cy + math.sin(angle) * 140;
+      canvas.drawLine(Offset(x1, y1), Offset(x2, y2), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
 
 class _RadarPainter extends CustomPainter {
   final Color color;

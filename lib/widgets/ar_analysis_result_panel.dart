@@ -170,20 +170,20 @@ class _ARAnalysisResultPanelState extends State<ARAnalysisResultPanel>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(18),
+        color: Colors.black.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: hasMatch
-              ? maakTeal.withValues(alpha: 0.6)
-              : maakBlue.withValues(alpha: 0.35),
-          width: 1.2,
+              ? maakTeal.withValues(alpha: 0.8)
+              : maakBlue.withValues(alpha: 0.4),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
             color: hasMatch
-                ? maakTeal.withValues(alpha: 0.12)
-                : maakBlue.withValues(alpha: 0.08),
-            blurRadius: 20,
+                ? maakTeal.withValues(alpha: 0.2)
+                : maakBlue.withValues(alpha: 0.1),
+            blurRadius: 25,
             spreadRadius: 2,
           ),
         ],
@@ -193,28 +193,63 @@ class _ARAnalysisResultPanelState extends State<ARAnalysisResultPanel>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(hasMatch, matches.length, others.length),
-          const Divider(color: Colors.white12, height: 1),
-          if (hasMatch) ...[
-            _buildSectionLabel('✅  Correspondances trouvées', maakTeal),
-            ...matches.map((t) => _buildTargetTile(t, isHighlighted: true)),
-          ],
-          if (others.isNotEmpty) ...[
-            _buildSectionLabel('🔍  Textes détectés (${others.length})', maakLightBlue),
-            ...others.take(4).map((t) => _buildTargetTile(t)),
-            if (others.length > 4)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                child: Text(
-                  '+ ${others.length - 4} texte(s) supplémentaire(s)',
-                  style: const TextStyle(
-                      color: Colors.white38,
-                      fontSize: 10,
-                      fontStyle: FontStyle.italic),
-                ),
+          const Divider(color: Colors.white10, height: 1),
+          
+          // Constrained list with rolling animation
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  if (hasMatch) ...[
+                    _buildSectionLabel('🛸  CIBLE IDENTIFIÉE', maakTeal),
+                    ...List.generate(matches.length, (i) {
+                      return _buildAnimatedTile(matches[i], i, isHighlighted: true);
+                    }),
+                  ],
+                  if (others.isNotEmpty) ...[
+                    _buildSectionLabel('📡  DÉTECTIONS SECONDAIRES (${others.length})', maakLightBlue),
+                    ...List.generate(others.length.clamp(0, 6), (i) {
+                      return _buildAnimatedTile(others[i], i + (hasMatch ? matches.length : 0));
+                    }),
+                    if (others.length > 6)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                        child: Text(
+                          '+ ${others.length - 6} AUTRES FLUX DÉTECTÉS',
+                          style: const TextStyle(
+                              color: Colors.white24,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace'),
+                        ),
+                      ),
+                  ],
+                ],
               ),
-          ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAnimatedTile(DetectedTextTarget target, int index, {bool isHighlighted = false}) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 400 + (index * 100)),
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: _buildTargetTile(target, isHighlighted: isHighlighted),
+          ),
+        );
+      },
     );
   }
 
