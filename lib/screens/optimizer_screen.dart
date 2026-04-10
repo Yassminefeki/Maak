@@ -4,6 +4,7 @@ import '../services/optimizer_service.dart';
 import '../widgets/heatmap_grid.dart';
 import '../widgets/recommendation_card.dart';
 import '../widgets/feedback_bottom_sheet.dart';
+import 'cv_navigation_screen.dart';
 
 class OptimizerScreen extends StatefulWidget {
   const OptimizerScreen({super.key});
@@ -142,11 +143,18 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
             ),
           ),
 
-      // FAB to open CV navigation
+      // FAB to open CV navigation — passes current office as AR target
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/cv'),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CVNavigationScreen(
+              targetGuichet: _selectedOffice,
+            ),
+          ),
+        ),
         icon: const Icon(Icons.camera_alt),
-        label: const Text("Je suis sur place"),
+        label: const Text('Je suis sur place'),
         backgroundColor: const Color(0xFF1D9E75),
       ),
     );

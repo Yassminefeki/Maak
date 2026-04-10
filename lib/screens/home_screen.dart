@@ -8,7 +8,7 @@ import '../models/user_profile.dart';
 import 'ai_form_screen.dart';
 import 'procedure_assistant_screen.dart';
 import 'office_finder_screen.dart';
-import 'visit_optimizer_screen.dart';
+import 'optimizer_screen.dart';
 import 'accessibility_settings_screen.dart';
 import '../core/constants/app_strings.dart';
 import 'chatbot_screen.dart';
@@ -215,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                       MaterialPageRoute(
                           builder: (_) =>
-                              const VisitOptimizerScreen()),
+                              const OptimizerScreen()),
                     ),
                   ),
                 ],

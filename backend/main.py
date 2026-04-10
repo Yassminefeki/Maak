@@ -9,6 +9,7 @@ from .database import SessionLocal
 import pytesseract
 from PIL import Image
 from io import BytesIO
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -60,8 +61,15 @@ async def get_user_profile_data(user_id: int, db: Session = Depends(get_db)):
 async def add_user_profile(user: UserProfileCreate, db: Session = Depends(get_db)):
     return await create_user_profile(user, db)
 
-# Path to the Tesseract executable
-pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"  
+# Path to the Tesseract executable (Dynamic for CI/CD and Docker)
+TESS_PATH = os.getenv("TESSERACT_PATH")
+if not TESS_PATH:
+    if os.name == 'nt': # Windows
+        TESS_PATH = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+    else: # Linux/Docker
+        TESS_PATH = "/usr/bin/tesseract"
+
+pytesseract.pytesseract.tesseract_cmd = TESS_PATH
 
 @app.post("/scan_form/")
 async def scan_form(file: UploadFile = File("C:\\Users\\lenovo\\OneDrive\\Bureau\\master faster\\وقت لاختبار OCR!.png")):

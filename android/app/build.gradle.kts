@@ -10,7 +10,7 @@ android {
 
     // Explicit SDK versions to match plugin requirements
     compileSdk = 36        // Required by flutter_tts
-    ndkVersion = "28.2.13676358" // Required by multiple plugins
+    ndkVersion = "27.0.12077973" // Required by multiple plugins
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.admin_process"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName

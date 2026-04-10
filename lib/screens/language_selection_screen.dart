@@ -1,22 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/providers/language_provider.dart';
 import '../core/constants/app_strings.dart';
 import 'profile_creation_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-/// Placeholder HomeScreen; replace with your actual dashboard screen
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: const Center(child: Text('Welcome back!')),
-    );
-  }
-}
+import 'home_screen.dart';
 
 class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});

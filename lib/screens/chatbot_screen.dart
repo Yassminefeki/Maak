@@ -66,12 +66,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     // Call simulated AI Service
     final lang = Provider.of<LanguageProvider>(context, listen: false).currentLanguage;
-    final reply = await ChatbotService.getBotReply(text, lang);
+    final botResponse = await ChatbotService.getBotReply(text, lang);
 
     if (mounted) {
       setState(() {
         _isTyping = false;
-        _messages.insert(0, ChatMessage(text: reply, isUser: false, timestamp: DateTime.now()));
+        _messages.insert(0, ChatMessage(
+          text: botResponse.text, 
+          isUser: false, 
+          timestamp: DateTime.now(),
+          actionRoute: botResponse.actionRoute,
+          actionLabel: botResponse.actionLabel,
+        ));
       });
       _scrollToBottom();
     }
@@ -153,13 +159,38 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           ],
         ),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        child: Text(
-          msg.text,
-          style: TextStyle(
-            color: msg.isUser ? Colors.white : Colors.black87,
-            height: 1.4,
-            fontSize: 15,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              msg.text,
+              style: TextStyle(
+                color: msg.isUser ? Colors.white : Colors.black87,
+                height: 1.4,
+                fontSize: 15,
+              ),
+            ),
+            if (msg.actionRoute != null) ...[
+              const SizedBox(height: 12),
+              const Divider(color: Colors.black12, height: 1),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, msg.actionRoute!),
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: Text(msg.actionLabel ?? 'Continuer', style: const TextStyle(fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D9E75),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
