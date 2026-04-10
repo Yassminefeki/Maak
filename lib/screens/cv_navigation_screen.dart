@@ -694,18 +694,6 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Analysis result panel
-              if (_isScanning || _detectedTargets.isNotEmpty) ...[
-                ARAnalysisResultPanel(
-                  targets: _detectedTargets,
-                  selectedTarget: _selectedTarget,
-                  searchKeyword: _searchKeyword,
-                  isProcessing: _isProcessing,
-                  onTargetSelected: _selectTarget,
-                ),
-                const SizedBox(height: 10),
-              ],
-
               // Search bar
               Row(
                 children: [
@@ -748,11 +736,11 @@ class _CVNavigationScreenState extends State<CVNavigationScreen>
                         _setSearchKeyword('');
                       },
                       child: Container(
-                        width: 46,
                         height: 46,
+                        width: 46,
                         decoration: BoxDecoration(
+                          color: _maakBlue.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
-                          color: Colors.red.withValues(alpha: 0.12),
                           border: Border.all(
                               color: Colors.red.withValues(alpha: 0.4)),
                         ),

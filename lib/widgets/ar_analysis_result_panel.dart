@@ -198,7 +198,7 @@ class _ARAnalysisResultPanelState extends State<ARAnalysisResultPanel>
           // Constrained list with rolling animation
           Flexible(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280),
+              constraints: const BoxConstraints(maxHeight: 160),
               child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 8),
