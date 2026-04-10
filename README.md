@@ -1,87 +1,137 @@
 # Maak (معاك) 🤝
-> Empowering administrative accessibility in Tunisia through AI and Computer Vision.
+> **Empowering administrative accessibility in Tunisia through AI, Computer Vision, and Predictive Analytics.**
 
-[![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Maak is a sophisticated, AI-driven administrative assistant designed specifically to bridge the accessibility gap for people with disabilities in Tunisia. By merging Generative AI, Computer Vision, and real-time AR navigation, Maak transforms how citizens interact with public services.
 
-## Description
-Maak is an AI-powered administrative assistant designed to bridge the accessibility gap for people with disabilities in Tunisia. By leveraging Computer Vision and Generative AI, the platform simplifies complex administrative procedures, automates form filling, and provides real-time indoor navigation within government offices.
+---
 
-## Features
-- **AI Chatbot**: Multilingual administrative guidance using Google Gemini.
-- **Form Automation**: OCR-based document scanning and automatic PDF generation.
-- **AR Navigation**: Real-time camera-based guidance to specific office counters.
-- **Visit Optimizer**: Predictive crowd analysis to recommend the best visiting times.
-- **Procedure Assistant**: Step-by-step walkthroughs for localized Tunisian admin tasks.
-- **Voice-First UI**: Seamless accessibility via Text-to-Speech (TTS) and Speech-to-Text (STT).
-- **Secure Storage**: Encrypted local database using SQLCipher for user sensitive data.
+## 🏛️ Project Architecture
 
-## Tech Stack
-**Frontend:** Flutter, Provider, Google ML Kit, Sensors Plus.  
-**Backend:** Python, FastAPI, SQLAlchemy, Tesseract OCR.  
-**AI Services:** Google Gemini (Generative AI).  
-**Database:** SQLite (sqflite_sqlcipher).
-
-## Prerequisites
-- **Flutter SDK**: `^3.4.3`
-- **Dart SDK**: `^3.0.0`
-- **Python**: `3.9` or higher
-- **Tesseract OCR**: Installed on host machine (for backend OCR).
-- **Gemini API Key**: Required for AI chatbot functionality.
-
-## Installation & Setup
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/Yassminefeki/Maak.git
-cd Maak
+```mermaid
+graph TD
+    A[Flutter App] -->|REST/JSON| B[FastAPI Backend]
+    A -->|Stream| C[Google ML Kit]
+    A -->|Prompt| D[Gemini 1.5 Flash]
+    B -->|OCR| E[Tesseract Engine]
+    B -->|PDF| F[ReportLab Generation]
+    A -->|Encrypted| G[SQLCipher Local DB]
+    A -->|Sensors| H[AR HUD Navigation]
 ```
 
-### 2. Frontend Setup (Flutter)
+---
+
+## 🚀 Key Services & Technical Deep-Dive
+
+### 🧠 Generative AI & Administrative Intent Detection
+Maak uses **Google Gemini 1.5 Flash** to provide context-aware administrative guidance. 
+- **Intent Matching**: A specialized `ProcedureDetectionService` maps natural language inputs to specific Tunisian administrative workflows (CIN, Cnam, Passport, etc.).
+- **Confidence Scoring**: The service uses zero-shot prompting to return structured JSON with confidence ratings, ensuring high-accuracy redirection.
+
+### 👁️ AR & Computer Vision Navigation
+The navigation module (`CVNavigationScreen`) provides a heads-up display (HUD) for indoor guidance.
+- **Dynamic Tracking**: Leverages `google_mlkit_text_recognition` to identify office signage in real-time.
+- **Smoothing Logic**: 
+    - **Lerp (Linear Interpolation)**: Floating AR elements use a 0.15 lerp factor to prevent visual jitter and provide smooth movement.
+    - **Hysteresis Persistence**: Implements a 1,200ms cooldown timer to maintain target focus even if the text is briefly obscured.
+- **HUD Components**: Custom-painted Radar, Crosshair, and Scanline animations provide a high-tech, accessible interface.
+
+### 📊 Visit Optimizer Algorithm
+The `OptimizerService` predicts the best time to visit an office by blending historical and live data:
+- **The Blended Score Formula**: 
+  $$Score = (HistoricalData \times 0.6) + (UserFeedback \times 0.4)$$
+- **Procedure Weighting**: Adjusts wait-time predictions based on the complexity of the specific administrative task requested.
+- **Interactive Heatmap**: A custom `HeatmapGrid` visualizes peak hours across the Tunisian work week.
+
+### 📠 Intelligent Form Automation
+Simplifies the daunting task of filling administrative forms through deep integration between mobile and server layers.
+- **Frontend Flow**: ML Kit extracts text blocks from physical forms.
+- **Backend Flow**: A **FastAPI** service uses `pytesseract` for high-precision OCR and then maps extracted data to the user’s encrypted profile.
+- **Output**: Generates a print-ready, legally formatted PDF using `ReportLab`.
+
+### 🔐 Security & Data Privacy
+Given the sensitivity of administrative data, Maak implements multi-layered security:
+- **Encryption**: The local SQLite database is fully encrypted using **SQLCipher**.
+- **Secure Storage**: API keys and session tokens are managed via **Flutter Secure Storage** (Keychain/Keystore).
+- **Privacy First**: Sensitive OCR processing can be targeted to run entirely on-device or on a private backend instance.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend** | Flutter, Provider, Google ML Kit, Sensors Plus |
+| **Backend** | Python, FastAPI, SQLAlchemy, Tesseract OCR |
+| **AI/ML** | Google Gemini 1.5 Flash |
+| **Database** | SQLite (SQLCipher), Shared Preferences |
+| **Reports** | ReportLab (PDF Generation) |
+
+---
+
+## ⚙️ Installation & Engineering Setup
+
+### 1. System Requirements
+- **Flutter SDK**: `^3.4.3`
+- **Python**: `3.9+`
+- **Tesseract OCR**: Required for backend services. 
+    - *Windows*: Download from [UB-Mannheim](https://github.com/UB-Mannheim/tesseract/wiki).
+    - *Linux*: `sudo apt install tesseract-ocr`.
+
+### 2. Frontend Setup
 ```bash
-# Install dependencies
+# Clone and enter directory
+git clone https://github.com/Yassminefeki/Maak.git && cd Maak
+
+# Fetch dependencies
 flutter pub get
 
-# Configure environment variables
-# Create a .env file in the root directory
-# GEMINI_API_KEY=your_api_key_here
+# Setup Environments
+# Create .env in root with:
+# GEMINI_API_KEY=your_key_here
 ```
 
-### 3. Backend Setup (FastAPI)
+### 3. Backend Setup
 ```bash
 cd backend
-# Install Python dependencies
+# Install dependencies
 pip install -r recuirement.txt
 
-# Run the backend server
+# Launch FastAPI Dev Server
 uvicorn main:app --reload
 ```
 
-## Usage
-To run the mobile application:
-```bash
-flutter run
-```
-*Note: Ensure the backend is running if using form-scanning features.*
+---
 
-## Project Structure
+## 📂 Project Structure
+
 ```text
 Maak/
-├── assets/             # Images and local configuration files
-├── backend/            # FastAPI server for OCR and PDF handling
+├── backend/            # Python FastAPI microservices
+│   ├── main.py         # OCR & PDF generation endpoints
+│   └── models.py       # SQLAlchemy ORM schemas
 ├── lib/
-│   ├── core/           # Routing, themes, and constants
-│   ├── data/           # Repositories and local DB providers
-│   ├── models/         # Data structures
-│   ├── screens/        # UI Pages (Chatbot, Navigation, Forms)
-│   ├── services/       # API and AI logic
-│   └── widgets/        # Reusable UI components
-└── test/               # Unit and widget tests
+│   ├── core/           # Routing and accessibility themes
+│   ├── services/       # AI (Gemini) and AR (Sensors) logic
+│   ├── data/           # Repositories for SQLCipher & Feedback
+│   ├── screens/        # UI Layers (AR Nav, Chatbot, Optimizer)
+│   └── widgets/        # Custom HUD and Heatmap components
+└── assets/             # Localization and static resources
 ```
 
-## Contributing
-We welcome contributions! Please fork the repository, create a feature branch, and submit a PR. For major changes, please open an issue first to discuss what you would like to change.
+---
 
-## License
-Distributed under the [MIT License](https://opensource.org/licenses/MIT).
+## 🤝 Contributing & Support
+Interested in improving accessibility in Tunisia? 
+1. Fork the repo.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
+
+---
+
+## 📜 License
+Maak is distributed under the **MIT License**. See `LICENSE` for more information.
+
+---
+*Created with ❤️ for a more inclusive Tunisia.*
