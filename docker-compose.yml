@@ -13,7 +13,6 @@ services:
       - ./backend:/app
     restart: always
 
-# Future: Add database service here
 # db:
 #   image: postgres:15
 #   environment:

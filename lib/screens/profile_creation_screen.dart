@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -487,6 +488,41 @@ Spoken text: "$transcript"
   }
 
   Future<void> _saveProfile() async {
+    // 1. Save to the Python backend first
+    try {
+      final uri = Uri.parse("http://localhost:8000/register_user/");
+      
+      // Formatting date from DD/MM/YYYY to YYYY-MM-DD for Python Pydantic
+      String formattedDob = birthDateController.text;
+      if (formattedDob.contains('/')) {
+        final parts = formattedDob.split('/');
+        if (parts.length == 3) {
+          formattedDob = '${parts[2]}-${parts[1]}-${parts[0]}';
+        }
+      }
+
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "full_name": fullNameController.text,
+          "cin": cinController.text,
+          "dob": formattedDob.isNotEmpty ? formattedDob : "2000-01-01", 
+          "phone": phoneController.text,
+          "address": addressController.text,
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        _showError("Erreur serveur backend: ${response.body}");
+        return;
+      }
+    } catch (e) {
+      _showError("Erreur réseau backend: $e");
+      return;
+    }
+
+    // 2. Save securely to Local DB
     String? key = await storage.read(key: 'db_encryption_key');
     if (key == null) {
       _showError('Encryption key not found');

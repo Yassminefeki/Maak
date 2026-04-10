@@ -11,9 +11,16 @@ import 'screens/tunisia_connect_screen.dart';
 import 'screens/optimizer_screen.dart';
 import 'screens/cv_navigation_screen.dart';
 import 'screens/ai_form_screen.dart';
+<<<<<<< HEAD
 import 'screens/office_finder_screen.dart';
 import 'screens/procedure_detail_screen.dart';
+=======
+<<<<<<< HEAD
+import 'screens/accessible_map.dart';
+=======
+>>>>>>> b5cf903870d9a7d542800664e4142a1ed844cd57
 import 'screens/splash_screen.dart';
+>>>>>>> b8b738e2a5618a8c219acc7c3c95cd88cdae92b7
 import 'services/notification_service.dart';
 
 void main() async {
@@ -82,6 +89,7 @@ class AdminProcessApp extends StatelessWidget {
                   userQueueNumber: 53,
                 ),
             '/ai_form': (_) => const AiFormScreen(),
+            '/accessible_map': (_) => const AccessibleMap(),
           },
           onGenerateRoute: (settings) {
             if (settings.name == '/procedure_detail' &&

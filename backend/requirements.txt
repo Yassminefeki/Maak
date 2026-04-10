@@ -8,3 +8,4 @@ pillow
 reportlab
 psycopg2-binary
 httpx
+python-multipart

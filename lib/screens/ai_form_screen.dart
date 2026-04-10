@@ -52,11 +52,7 @@ class _AiFormScreenState extends State<AiFormScreen> {
       await Future.delayed(const Duration(seconds: 2));
       setState(() {
         _detectedFields = {
-          'Nom complet': _profile?.fullName ?? 'Non renseigné',
-          'CIN': _profile?.cin ?? 'Non renseigné',
-          'Adresse': _profile?.address ?? 'Non renseigné',
-          'Date de naissance': _profile?.dob ?? 'Non renseigné',
-          'Téléphone': _profile?.phone ?? 'Non renseigné',
+          'Traitement en cours...': 'Analyse du document par l\'IA',
         };
       });
       // Send the image to the backend for processing and PDF generation
@@ -86,18 +82,17 @@ class _AiFormScreenState extends State<AiFormScreen> {
         var responseBody = await response.stream.bytesToString();
         var jsonResponse = json.decode(responseBody);
 
-        // Convert Map to UserProfile object
-        UserProfile profile = UserProfile.fromMap(jsonResponse);
-
         setState(() {
-          _profile = profile;
-          _detectedFields = {
-            'Nom complet': _profile?.fullName ?? 'Non renseigné',
-            'CIN': _profile?.cin ?? 'Non renseigné',
-            'Adresse': _profile?.address ?? 'Non renseigné',
-            'Date de naissance': _profile?.dob ?? 'Non renseigné',
-            'Téléphone': _profile?.phone ?? 'Non renseigné',
-          };
+          _detectedFields = {};
+          if (jsonResponse.containsKey('name')) _detectedFields['Nom complet'] = jsonResponse['name'].toString();
+          if (jsonResponse.containsKey('cin')) _detectedFields['CIN'] = jsonResponse['cin'].toString();
+          if (jsonResponse.containsKey('address')) _detectedFields['Ville/Adresse'] = jsonResponse['address'].toString();
+          if (jsonResponse.containsKey('dob')) _detectedFields['Date de naissance'] = jsonResponse['dob'].toString();
+          if (jsonResponse.containsKey('phone')) _detectedFields['Téléphone'] = jsonResponse['phone'].toString();
+          
+          if (_detectedFields.isEmpty) {
+             _detectedFields['Reconnaissance échouée'] = 'Aucun champ pertinent détecté.';
+          }
         });
 
         ScaffoldMessenger.of(context).showSnackBar(

@@ -135,7 +135,8 @@ class AccessibilitySettingsScreen extends StatelessWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.2),
           radius: 28,

@@ -2,10 +2,10 @@
 from fastapi import FastAPI, Depends, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from .models import Base, engine, UserProfile
-from .crud import create_user_profile, get_user_profile
-from .schemas import UserProfileCreate, UserProfileResponse
-from .database import SessionLocal
+from models import Base, engine, UserProfile
+from crud import create_user_profile, get_user_profile
+from schemas import UserProfileCreate, UserProfileResponse
+from database import SessionLocal
 import pytesseract
 from PIL import Image
 from io import BytesIO
@@ -119,11 +119,22 @@ def extract_field(text: str, field_name: str):
 # Function to generate a print-ready PDF
 def generate_pdf(filled_form):
     c = canvas.Canvas("filled_form.pdf", pagesize=letter)
-    c.drawString(100, 750, f"Name: {filled_form['name']}")
-    c.drawString(100, 730, f"Address: {filled_form['address']}")
-    c.drawString(100, 710, f"DOB: {filled_form['dob']}")
-    c.drawString(100, 690, f"Phone: {filled_form['phone']}")
-    c.drawString(100, 670, f"CIN: {filled_form['cin']}")
+    y_pos = 750
+    if "name" in filled_form:
+        c.drawString(100, y_pos, f"Nom: {filled_form['name']}")
+        y_pos -= 20
+    if "address" in filled_form:
+        c.drawString(100, y_pos, f"Adresse/Ville: {filled_form['address']}")
+        y_pos -= 20
+    if "dob" in filled_form:
+        c.drawString(100, y_pos, f"Date de naissance: {filled_form['dob']}")
+        y_pos -= 20
+    if "phone" in filled_form:
+        c.drawString(100, y_pos, f"Telephone: {filled_form['phone']}")
+        y_pos -= 20
+    if "cin" in filled_form:
+        c.drawString(100, y_pos, f"CIN: {filled_form['cin']}")
+        y_pos -= 20
     c.save()
 
 @app.post("/auto_fill_form/{user_id}")
@@ -156,17 +167,25 @@ async def auto_fill_form(user_id: int, file: UploadFile = File(...), db: Session
 
 def fill_form_with_user_data(extracted_text, user_profile):
     """
-    This function fills the form (extracted text or fields) with the user's profile data.
+    This function fills the form with the user's profile data,
+    only for fields that were detected via OCR in the image.
     """
-    filled_form = {
-        "name": user_profile.full_name,  # Access the attributes directly
-        "address": user_profile.address,
-        "dob": user_profile.dob,
-        "phone": user_profile.phone,
-        "cin": user_profile.cin
-    }
+    extracted_text_lower = extracted_text.lower()
+    filled_form = {}
 
-    # You could process the extracted_text further to match it with these fields.
-    # Optionally, use regular expressions to better extract specific fields from OCR text.
+    if "nom" in extracted_text_lower or "name" in extracted_text_lower:
+        filled_form["name"] = user_profile.full_name
+        
+    if "ville" in extracted_text_lower or "adresse" in extracted_text_lower or "address" in extracted_text_lower:
+        filled_form["address"] = user_profile.address
+        
+    if "date" in extracted_text_lower or "naissance" in extracted_text_lower or "dob" in extracted_text_lower:
+        filled_form["dob"] = user_profile.dob
+        
+    if "tel" in extracted_text_lower or "téléphone" in extracted_text_lower or "phone" in extracted_text_lower:
+        filled_form["phone"] = user_profile.phone
+        
+    if "cin" in extracted_text_lower or "carte" in extracted_text_lower:
+        filled_form["cin"] = user_profile.cin
 
     return filled_form
