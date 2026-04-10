@@ -6,3 +6,5 @@ python-dotenv
 pytesseract
 pillow
 reportlab
+psycopg2-binary
+httpx

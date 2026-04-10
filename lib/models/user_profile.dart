@@ -18,10 +18,10 @@ class UserProfile {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'fullName': fullName,
+      'full_name': fullName,
       'cin': cin,
       'address': address,
-      'dob': dob,
+      'birth_date': dob,
       'phone': phone,
     };
   }
@@ -29,11 +29,11 @@ class UserProfile {
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     return UserProfile(
       id: map['id'],
-      fullName: map['fullName'],
-      cin: map['cin'],
-      address: map['address'],
-      dob: map['dob'],
-      phone: map['phone'],
+      fullName: (map['fullName'] ?? map['full_name'] ?? '').toString(),
+      cin: (map['cin'] ?? '').toString(),
+      address: (map['address'] ?? '').toString(),
+      dob: (map['dob'] ?? map['birth_date'] ?? '').toString(),
+      phone: (map['phone'] ?? '').toString(),
     );
   }
 }

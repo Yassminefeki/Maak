@@ -1,82 +1,148 @@
-// lib/services/chatbot_service.dart
 import 'dart:async';
-import 'package:google_generative_ai/google_generative_ai.dart';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+
 import '../core/constants/app_strings.dart';
 import '../core/database/database_helper.dart';
+import '../models/chat_action.dart';
+import '../models/procedure.dart';
 import 'local_assistant_service.dart';
 
 class ChatBotResponse {
   final String text;
-  final String? actionRoute;
-  final String? actionLabel;
+  final List<ChatAction> actions;
+  final Procedure? procedure;
 
-  ChatBotResponse({required this.text, this.actionRoute, this.actionLabel});
+  const ChatBotResponse({
+    required this.text,
+    this.actions = const [],
+    this.procedure,
+  });
 }
 
 class ChatbotService {
-  static Future<ChatBotResponse> getBotReply(String userText, AppLanguage lang) async {
-    final _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-
-    // Check for API key presence
-    if (_apiKey.isEmpty || _apiKey == 'your_real_api_key_here') {
-      final local = await LocalAssistantService.handleOfflineQuery(userText, lang);
-      return ChatBotResponse(
-        text: local.text,
-        actionRoute: local.actionRoute,
-        actionLabel: local.actionLabel,
-      );
+  static Future<ChatBotResponse> getBotReply(
+    String userText,
+    AppLanguage lang,
+  ) async {
+    final procedures = await DatabaseHelper.instance.getAllProcedures();
+    final matches = DatabaseHelper.rankProcedures(procedures, userText);
+    if (matches.isNotEmpty && matches.first.score >= 4) {
+      return _buildProcedureReply(matches.first.procedure, lang);
     }
 
-    String userInfo = "Aucune information personnelle disponible.";
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+    if (apiKey.isEmpty || apiKey == 'your_real_api_key_here') {
+      final local = await LocalAssistantService.handleOfflineQuery(userText, lang);
+      return ChatBotResponse(text: local.text, actions: local.actions);
+    }
 
+    var userInfo = 'Aucune information personnelle disponible.';
     try {
       final profile = await DatabaseHelper.instance.getProfile();
       if (profile != null) {
-        userInfo = "Nom: ${profile.fullName}, CIN: ${profile.cin}, Adresse: ${profile.address}";
+        userInfo =
+            'Nom: ${profile.fullName}, CIN: ${profile.cin}, Adresse: ${profile.address}';
       }
-    } catch (e) {
-      print("⚠️ Could not load user profile: $e");
-    }
+    } catch (_) {}
 
-    String langInstruction = 'Tu es MaakBot, un assistant consulaire tunisien.';
-    if (lang == AppLanguage.french) {
-      langInstruction += ' Réponds en français.';
-    } else if (lang == AppLanguage.darija) {
-      langInstruction += ' Réponds en dialecte tunisien (darija).';
-    } else {
-      langInstruction += ' Réponds en arabe classique.';
-    }
+    final proceduresInfo = procedures.map((procedure) {
+      return [
+        procedure.title,
+        'Documents: ${procedure.requiredDocuments.join(', ')}',
+        'Cout: ${procedure.cost}',
+        'Lieu: ${procedure.whereToGo}',
+        'Etapes: ${procedure.steps.join(' | ')}',
+      ].join('\n');
+    }).join('\n\n');
 
-    final String fullContext = '''
+    final langInstruction = switch (lang) {
+      AppLanguage.french =>
+        'Reponds en francais. Sois tres concis. Maximum 4 lignes. Priorite aux faits et aux prochaines actions.',
+      AppLanguage.darija =>
+        'Reponds en darija. Koun mokhtasar barcha. 4 sotor maximum. Atini facts w action directe.',
+      AppLanguage.arabic =>
+        'أجب بالعربية. كن موجزاً جداً في 4 أسطر كحد أقصى. أعط الحقائق والخطوة التالية فقط.',
+    };
+
+    final prompt = '''
+Tu es MaakBot.
+Role principal:
+- Minimum interaction
+- Reponses courtes
+- Extraire les faits depuis la base de connaissances
+- Proposer l'ecran utile quand c'est pertinent
+
 $langInstruction
-Utilisateur : $userInfo
-Question : $userText
+
+PROCEDURES:
+$proceduresInfo
+
+USER_PROFILE:
+$userInfo
+
+Si la question porte sur une procedure, reponds avec:
+1. documents
+2. cout
+3. delai
+4. lieu
+Pas de bavardage.
+
+Question utilisateur: $userText
 ''';
 
     try {
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: _apiKey,
-      );
+      final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
+      final response = await model
+          .generateContent([Content.text(prompt)])
+          .timeout(const Duration(seconds: 8));
 
-      final content = [Content.text(fullContext)];
-      final response = await model.generateContent(content).timeout(const Duration(seconds: 8));
-
-      if (response.text == null) {
-        throw Exception("Empty response");
+      if (response.text == null || response.text!.trim().isEmpty) {
+        throw Exception('Empty response');
       }
 
-      return ChatBotResponse(text: response.text!);
-    } catch (e) {
-      print("❌ Gemini API Error, falling back to Local Assistant: $e");
-      // IF API Fails, trigger the Local Keyword Fallback
+      return ChatBotResponse(text: response.text!.trim());
+    } catch (_) {
       final local = await LocalAssistantService.handleOfflineQuery(userText, lang);
       return ChatBotResponse(
-        text: "Assistant local en relais : ${local.text}",
-        actionRoute: local.actionRoute,
-        actionLabel: local.actionLabel,
+        text: lang == AppLanguage.french
+            ? 'Assistant local en relais. ${local.text}'
+            : 'Assistant local en relais. ${local.text}',
+        actions: local.actions,
       );
     }
+  }
+
+  static ChatBotResponse _buildProcedureReply(
+    Procedure procedure,
+    AppLanguage lang,
+  ) {
+    final text = switch (lang) {
+      AppLanguage.french =>
+        'Procedure trouvee: ${procedure.title}. Consultez les documents, etapes et navigation ci-dessous.',
+      AppLanguage.darija =>
+        'لقينا الإجراء: ${procedure.title}. شوف الوثائق والخطوات والتنقل لتحت.',
+      AppLanguage.arabic =>
+        'تم العثور على الإجراء: ${procedure.title}. راجع الوثائق والخطوات والتنقل بالأسفل.',
+    };
+
+    return ChatBotResponse(
+      text: text,
+      procedure: procedure,
+      actions: [
+        ChatAction(
+          label: lang == AppLanguage.french ? 'Voir details' : 'Voir details',
+          route: '/procedure_detail',
+          payload: procedure.key,
+        ),
+        ChatAction(
+          label: lang == AppLanguage.french
+              ? 'Trouver un bureau accessible'
+              : 'Trouver un bureau accessible',
+          route: '/office_finder',
+        ),
+      ],
+    );
   }
 }

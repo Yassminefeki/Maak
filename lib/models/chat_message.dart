@@ -1,16 +1,18 @@
-// lib/models/chat_message.dart
+import 'chat_action.dart';
+import 'procedure.dart';
+
 class ChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
-  final String? actionRoute;
-  final String? actionLabel;
+  final List<ChatAction> actions;
+  final Procedure? procedure;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
-    this.actionRoute,
-    this.actionLabel,
+    this.actions = const [],
+    this.procedure,
   });
 }

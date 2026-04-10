@@ -11,6 +11,8 @@ import 'screens/tunisia_connect_screen.dart';
 import 'screens/optimizer_screen.dart';
 import 'screens/cv_navigation_screen.dart';
 import 'screens/ai_form_screen.dart';
+import 'screens/office_finder_screen.dart';
+import 'screens/procedure_detail_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 
@@ -74,11 +76,23 @@ class AdminProcessApp extends StatelessWidget {
             '/': (_) => const SplashScreen(),
             '/connect': (_) => const TunisiaConnectScreen(),
             '/optimizer': (_) => const OptimizerScreen(),
+            '/office_finder': (_) => const OfficeFinderScreen(),
             '/cv': (_) => const CVNavigationScreen(
                   targetGuichet: 'Guichet 3',
                   userQueueNumber: 53,
                 ),
             '/ai_form': (_) => const AiFormScreen(),
+          },
+          onGenerateRoute: (settings) {
+            if (settings.name == '/procedure_detail' &&
+                settings.arguments is String) {
+              return MaterialPageRoute(
+                builder: (_) => ProcedureDetailScreen(
+                  procedureKey: settings.arguments! as String,
+                ),
+              );
+            }
+            return null;
           },
         );
       },

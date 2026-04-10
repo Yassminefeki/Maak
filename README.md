@@ -20,7 +20,7 @@
     - [Backend Architecture](#backend-architecture)
 5. [Database & Data Models](#-database--data-models)
 6. [Engineering Setup Guide](#-engineering-setup-guide)
-7. [Future Roadmap](#-future-roadmap)
+7. [DevOps & CI/CD Lifecycle](#-devops--cicd-lifecycle)
 8. [FAQ & Troubleshooting](#-faq--troubleshooting)
 
 ---
@@ -161,11 +161,26 @@ flutter run
 
 ---
 
-## 🗺️ Future Roadmap
+## 🌍 DevOps & CI/CD Lifecycle
 
-- **Phase 1 (Q2 2026)**: Integration of real-time wait-list tracking via office IoT.
-- **Phase 2 (Q3 2026)**: Personalized voice signatures for automated phone inquiries.
-- **Phase 3 (Q4 2026)**: Expansion to multi-office "One Stop Shop" (Guichet Unique) procedures.
+Maak follows modern DevOps practices to ensure development consistency, automated quality control, and streamlined release cycles.
+
+### 🐳 Containerization & Local Development
+The backend is fully containerized using **Docker**, which eliminates the "it works on my machine" syndrome.
+- **Docker Compose**: Orchestrates the FastAPI application and its environment. Run `docker-compose up` to launch the backend with all system dependencies (Tesseract OCR, etc.) pre-configured.
+- **Dockerfile**: Uses a lightweight `python:3.11-slim` base image, optimized for production-grade security and size.
+
+### ⛓️ Continuous Integration (GitHub Actions)
+The project utilizes a automated CI/CD pipeline defined in `.github/workflows/main_ci.yml` that triggers on every push to `main` and `dev` branches.
+
+1. **Backend Quality Assurance**:
+    - **Linting**: Uses `flake8` to enforce PEP8 standards and catch syntax errors early.
+    - **Testing Environment**: Runs in an isolated Ubuntu environment to ensure code portability.
+2. **Frontend (Mobile) Validation**:
+    - **Static Analysis**: Executes `flutter analyze` to guarantee code quality and adherence to Flutter best practices.
+3. **Automated Build & Delivery**:
+    - **Backend Artifacts**: Automatically builds a production Docker image and pushes it to the **GitHub Container Registry (GHCR)**.
+    - **Staging APKs**: Compiles a debug APK on every successful build, making it immediately available for manual testing and QA feedback.
 
 ---
 
