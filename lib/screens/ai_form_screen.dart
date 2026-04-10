@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/providers/language_provider.dart';
 import '../core/providers/accessibility_provider.dart';
 import '../core/database/database_helper.dart';
 import '../models/user_profile.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
 
 class AiFormScreen extends StatefulWidget {
   const AiFormScreen({super.key});
@@ -17,7 +22,7 @@ class AiFormScreen extends StatefulWidget {
 }
 
 class _AiFormScreenState extends State<AiFormScreen> {
-  File? _scannedImage;
+  XFile? _scannedImage;
   bool _isScanning = false;
   Map<String, String> _detectedFields = {};
   UserProfile? _profile;
@@ -30,27 +35,21 @@ class _AiFormScreenState extends State<AiFormScreen> {
     _loadProfile();
   }
 
-  // ✅ FIXED: Convert Map → UserProfile
   Future<void> _loadProfile() async {
-    final data = await DatabaseHelper.instance.getProfile();
-
-    if (data != null && mounted) {
-      final profile = UserProfile.fromMap(data);
-      setState(() => _profile = profile);
-    }
+    final profile = await DatabaseHelper.instance.getProfile();
+    if (mounted) setState(() => _profile = profile);
   }
 
   Future<void> _simulateScan() async {
     setState(() => _isScanning = true);
 
+    // Simulate camera / gallery pick (demo)
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-
     if (image != null) {
-      setState(() => _scannedImage = File(image.path));
+      setState(() => _scannedImage = image);
 
-      // Simulate OCR + AI
+      // Simulate OCR + AI field detection (realistic for demo)
       await Future.delayed(const Duration(seconds: 2));
-
       setState(() {
         _detectedFields = {
           'Nom complet': _profile?.fullName ?? 'Non renseigné',
@@ -60,9 +59,73 @@ class _AiFormScreenState extends State<AiFormScreen> {
           'Téléphone': _profile?.phone ?? 'Non renseigné',
         };
       });
+      // Send the image to the backend for processing and PDF generation
+      _uploadForm(image);
     }
-
     setState(() => _isScanning = false);
+  }
+
+  Future<void> _uploadForm(XFile image) async {
+    var uri = Uri.parse(
+        "http://127.0.0.1:8000/auto_fill_form/2"); // Change user ID as needed
+    var request = http.MultipartRequest('POST', uri);
+
+    var pic = http.MultipartFile.fromBytes(
+      "file",
+      await image.readAsBytes(),
+      filename: image.name,
+    );
+    request.files.add(pic);
+
+    try {
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        print("File uploaded successfully");
+
+        var responseBody = await response.stream.bytesToString();
+        var jsonResponse = json.decode(responseBody);
+
+        // Convert Map to UserProfile object
+        UserProfile profile = UserProfile.fromMap(jsonResponse);
+
+        setState(() {
+          _profile = profile;
+          _detectedFields = {
+            'Nom complet': _profile?.fullName ?? 'Non renseigné',
+            'CIN': _profile?.cin ?? 'Non renseigné',
+            'Adresse': _profile?.address ?? 'Non renseigné',
+            'Date de naissance': _profile?.dob ?? 'Non renseigné',
+            'Téléphone': _profile?.phone ?? 'Non renseigné',
+          };
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("PDF generated and ready for download!")));
+      } else {
+        print("Failed to upload file: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error: $e");
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error uploading the form")));
+    }
+  }
+
+  Future<void> _openPDF(String pdfUrl) async {
+    if (await canLaunch(pdfUrl)) {
+      await launch(pdfUrl);
+    } else {
+      throw 'Could not open the PDF';
+    }
+  }
+
+  Future<String> _savePDF(Uint8List pdfBytes) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final pdfPath = '${directory.path}/filled_form.pdf';
+    final file = File(pdfPath);
+    await file.writeAsBytes(pdfBytes);
+    return pdfPath;
   }
 
   @override
@@ -71,15 +134,13 @@ class _AiFormScreenState extends State<AiFormScreen> {
     final accessibility = Provider.of<AccessibilityProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(lang.t('ai_form')),
-      ),
+      appBar: AppBar(title: Text(lang.t('ai_form'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📸 Scan Button
+            // Scan button - large for accessibility
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -97,58 +158,39 @@ class _AiFormScreenState extends State<AiFormScreen> {
               ),
             ),
 
-            // 📷 Image Preview
             if (_scannedImage != null) ...[
               const SizedBox(height: 24),
-              Text(
-                'Formulaire scanné',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Formulaire scanné',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(
-                  _scannedImage!,
-                  height: 220,
-                  fit: BoxFit.cover,
-                ),
+                child: kIsWeb
+                    ? Image.network(_scannedImage!.path, height: 220, fit: BoxFit.cover)
+                    : Image.file(File(_scannedImage!.path), height: 220, fit: BoxFit.cover),
               ),
             ],
 
-            // 🧠 Detected Fields
             if (_detectedFields.isNotEmpty) ...[
               const SizedBox(height: 32),
-              Text(
-                'Champs détectés et auto-remplis',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Champs détectés et auto-remplis',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 16),
-
-              ..._detectedFields.entries.map(
-                (entry) => Card(
-                  child: ListTile(
-                    title: Text(
-                      entry.key,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+              ..._detectedFields.entries.map((entry) => Card(
+                    child: ListTile(
+                      title: Text(entry.key,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(entry.value),
+                      trailing:
+                          const Icon(Icons.check_circle, color: Colors.green),
                     ),
-                    subtitle: Text(entry.value),
-                    trailing: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                  ),
-                ),
-              ),
+                  )),
 
               const SizedBox(height: 32),
-
-              // 📄 Preview
-              Text(
-                'Aperçu du formulaire rempli (PDF prêt à imprimer)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              // Preview filled form (simulated realistic layout)
+              Text('Aperçu du formulaire rempli (PDF prêt à imprimer)',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
-
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -158,63 +200,49 @@ class _AiFormScreenState extends State<AiFormScreen> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _detectedFields.entries.map((e) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 140,
-                            child: Text(
-                              e.key,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w500),
+                  children: _detectedFields.entries
+                      .map((e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                    width: 140,
+                                    child: Text(e.key,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w500))),
+                                const Text(': '),
+                                Expanded(
+                                    child: Text(e.value,
+                                        style: const TextStyle(fontSize: 16))),
+                              ],
                             ),
-                          ),
-                          const Text(': '),
-                          Expanded(
-                            child: Text(
-                              e.value,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                          ))
+                      .toList(),
                 ),
               ),
 
               const SizedBox(height: 24),
-
-              // 📥 Download Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                            '✅ Formulaire PDF généré et prêt à imprimer !'),
-                      ),
+                          content: Text(
+                              '✅ Formulaire PDF généré et prêt à imprimer !')),
                     );
                   },
-                  child: const Text(
-                    '📄 Télécharger PDF imprimable',
-                    style: TextStyle(fontSize: 18),
-                  ),
+                  child: const Text('📄 Télécharger PDF imprimable',
+                      style: TextStyle(fontSize: 18)),
                 ),
               ),
             ],
 
-            // 🔊 Voice Mode
             if (accessibility.voiceMode)
               const Padding(
                 padding: EdgeInsets.only(top: 20),
-                child: Text(
-                  '🔊 Mode voix activé – tout sera lu à haute voix',
-                  style: TextStyle(color: Colors.blue),
-                ),
+                child: Text('🔊 Mode voix activé – tout sera lu à haute voix',
+                    style: TextStyle(color: Colors.blue)),
               ),
           ],
         ),

@@ -10,6 +10,7 @@ import 'core/providers/accessibility_provider.dart';
 import 'screens/tunisia_connect_screen.dart';
 import 'screens/optimizer_screen.dart';
 import 'screens/cv_navigation_screen.dart';
+import 'screens/ai_form_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -74,6 +75,7 @@ class AdminProcessApp extends StatelessWidget {
                   targetGuichet: 'Guichet 3',
                   userQueueNumber: 53,
                 ),
+            '/ai_form': (_) => const AiFormScreen(),
           },
         );
       },

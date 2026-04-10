@@ -30,11 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadProfile();
   }
 
-  // ✅ FIXED: convert Map -> UserProfile
   Future<void> _loadProfile() async {
-    final data = await DatabaseHelper.instance.getProfile();
-    if (data != null && mounted) {
-      final profile = UserProfile.fromMap(data);
+    final profile = await DatabaseHelper.instance.getProfile();
+    if (profile != null && mounted) {
       setState(() => _userProfile = profile);
     }
   }

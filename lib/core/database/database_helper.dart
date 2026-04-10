@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../models/procedure.dart';
+import '../../models/user_profile.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -44,13 +45,13 @@ class DatabaseHelper {
       )
     ''');
   }
-  Future<Map<String, dynamic>?> getProfile() async {
+  Future<UserProfile?> getProfile() async {
     final db = await database;
 
     final result = await db.query('profil', limit: 1);
 
     if (result.isNotEmpty) {
-      return result.first;
+      return UserProfile.fromMap(result.first);
     }
     return null;
   }
